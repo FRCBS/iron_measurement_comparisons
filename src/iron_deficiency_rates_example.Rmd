@@ -1,0 +1,178 @@
+---
+title: "Prevalence of iron deficiency"
+author: "Muriel Lobier"
+date: "11/22/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggthemes)
+library(rsample)
+library(broom)
+library(scales)
+library(kableExtra)
+library(boot)
+```
+
+# Summary
+
+This document includes code to compute iron deficiency (Ferritin < 15 \(\mu\)g/L) rates in the donor population per 5 year age groups.
+
+It uses bootstrapping to compute perecntile based confidence intervals on the prevalence rates since in our case small and unequal sample sizes made it necessary to estimate uncertainty on the obtained estimates. On a large sample, this may not be necessary. 
+
+# Data loading and preprocessing
+
+The code expects a data-frame with one row per donor. The columns are donor (donor ID), ferritin, age, and sex.
+
+We remove new donors from the data since we are mainly interested in the prevalence in iron deficiency in repeat donors. As our dataset was not large, we could not stratify by previous donation frequency as is probably advisable (e.g., re-activated donors, low frequency donors and high frequency donors).
+
+We will stratify by 5-year age groups and sex to compute the prevalence of iron deficiency
+
+```{r load}
+##############
+### Load data
+##############
+data_for_modeling <- load("xxxxxxxx")
+
+# head(data_for_modeling)
+# donor     ferritin      age       sex
+# <chr>     <dbl>         <dbl>    <fctr>
+
+############################
+### Remove new donors if needed 
+############################
+
+
+
+
+##########################################
+# Create age group variable
+##########################################
+
+data_for_modeling <-
+  data_for_modeling %>% 
+  mutate(age_group = case_when(age < 25 ~ "18-24",
+                               age < 30 ~ "25-29",
+                               age < 35 ~ "30-34",
+                               age < 40 ~ "35-39",
+                               age < 45 ~ "40-44",
+                               age < 50 ~ "45-49",
+                               age < 55 ~ "50-54",
+                               age < 60 ~ "55-59",
+                               age < 65 ~ "60-64",
+                               TRUE ~ "65-70"))
+```
+
+
+## Sample sizes for each age and sex sub-group.
+
+```{r count}
+data_for_modeling %>% 
+  count(sex, age_group) %>% 
+  spread(key = age_group, value = n) %>% 
+  kable()%>%
+  kable_styling()
+```
+
+# Figure
+
+We compute the bootstrap distribution ofthe iron deficiency prevalence.
+
+```{r boot}
+######################################################################
+# Write function that computes ID prevalence in bootstrapped sample
+######################################################################
+
+get_proportions <- function(split){
+     analysis(split) %>% 
+      group_by(age_group ) %>% 
+      summarise(ID_proportion = mean(ferritin < 15)) %>% 
+     ungroup() %>% 
+    rename(term= age_group,
+           estimate= ID_proportion)
+}
+
+######################################################################
+# Compute bootstrapped samples for women
+######################################################################
+set.seed(215)
+
+data_for_bootstrap <- 
+  data_for_modeling %>% 
+  filter(sex == "Women")
+
+
+boot_data <- bootstraps(data_for_bootstrap,
+                        times = 1000,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+
+bootstrapped_proportions_women <- 
+  boot_data %>% 
+    mutate(props = map(splits, get_proportions)) 
+
+########################################################
+# Compute bootstrapped samples for men
+########################################################
+
+data_for_bootstrap <- 
+  data_for_modeling %>% 
+  filter(sex == "Men")
+
+boot_data <- bootstraps(data_for_bootstrap,
+                        times = 1000,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+bootstrapped_proportions_men <- 
+  boot_data %>% 
+    mutate(props = map(splits, get_proportions)) 
+
+```
+
+We compute and plot the prevalence and its 95% percentile confidence intervals  and save the figure externally if needed. 
+
+```{r fig.width=10}
+
+####################################################################################
+## Compute percentile 95% confidence intervals from bootstrapped distribution
+####################################################################################
+
+figure <- int_pctl(bootstrapped_proportions_women, props) %>% 
+  mutate(sex = "Women") %>% 
+  bind_rows(int_pctl(bootstrapped_proportions_men, props) %>% 
+  mutate(sex = "Men") ) %>% 
+## plot prevalence and 95%CI of prevalence fir each 5 year age group
+  ggplot(aes(x = term, y = .estimate, ymin = .lower, ymax = .upper)) +
+ geom_crossbar(alpha = 0.35, 
+            fill = "grey",
+            color = "dark grey") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1),
+                     breaks = seq(0,.8, by = 0.05)) +
+  facet_wrap(~sex) +
+    theme_few() +
+  xlab("Age") +
+  ylab("Prevalence of iron deficiency") +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 10),
+        strip.text =  element_text(size = 16))
+
+figure
+
+####################################################################################
+## Save figure
+####################################################################################
+
+  # ggsave(filename = "XXXX/age_risk_ID.png",
+  #        plot = figure, 
+  #      width = 15,
+  #      height = 10,
+  #      dpi = 300,
+  #      units = "cm")
+```
+
+
+
