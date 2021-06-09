@@ -1,0 +1,1366 @@
+---
+title: "Prevalence of iron deficiency"
+author: "Mikko Arvas"
+date: "`r Sys.time()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+Sys.setlocale("LC_MESSAGES", 'en_GB.UTF-8')
+Sys.setenv(LANG = "en_US.UTF-8")
+# echo "rmarkdown::render('ferritin_stats_FIN.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/ferritin_stats_FIN.pdf')" | R --slave
+knitr::opts_chunk$set(
+        echo = TRUE,
+        message = FALSE,
+        warning = FALSE
+)
+
+library(tidyverse)
+library(ggthemes)
+library(rsample)
+library(broom)
+library(scales)
+library(kableExtra)
+library(boot)
+library(tableone)
+#library(flextable)
+```
+
+Based on Muriel Lobier's https://github.com/FRCBS/iron_measurement_comparisons/blob/master/src/iron_deficiency_rates_example.Rmd 
+
+# Summary
+In this document we calculate for Finnish Cohorts:
+
+- describe the amount of ferritin data
+- descriptive statistics on ferritin levels 
+- iron deficiency (Ferritin < 15 \(\mu\)g/L) rates in the donor population per 5 year age groups.
+
+# Ferritin data loading and preprocessing
+
+```{r}
+load("../results/thldata.rdata")
+#Get id, ferritin, age and sex
+fr1997 <- thldata$fr1997 %>% 
+  select(RELEASE_ID,FERRITIN, IKA,SUKUP) %>%  
+  na.omit() %>% 
+  rename(id=RELEASE_ID,ferritin=FERRITIN,age=IKA,sex=SUKUP) %>% 
+  mutate(sex= as.factor(sex),
+         cohort = "FINRISK" 
+  )
+levels(fr1997$sex) <- c("Men","Women")
+
+h2000 <- thldata$h2000 %>% 
+  select(RELEASE_ID,FERRITIINI, IKA2,SP2) %>%  
+  na.omit() %>% rename(id=RELEASE_ID,ferritin=FERRITIINI,age=IKA2,sex=SP2) %>% 
+  mutate(sex= as.factor(sex),
+         cohort = "H2000" 
+  )
+levels(h2000$sex) <- c("Men","Women")
+
+#find muriels original script from git and see how she got the data
+
+### Load FinDonor data
+load("../data/r02.fd.bd.all.rdata")
+### Remove new donors if needed 
+indiv_donations_data <- 
+  output %>% 
+  filter(!is.na(Ferritin) & !is.na(Hb_v)) %>% 
+  rename(sex = gender) 
+rm(output)
+# We now add the demographic data
+load("../data/r02ds.donorData.rdata")
+dons <- output %>% 
+  rename(sex = Gender)
+rm(output)
+findonor <-
+  indiv_donations_data %>% 
+  group_by(donor) %>% 
+  filter(date == min(date)) %>% 
+  ungroup() %>% 
+  dplyr::select(donor, Ferritin, Hb_v,CRP) %>% 
+  left_join(dons, by = "donor") %>% 
+  #Here we remove new donors
+  filter(DonationCount_FB > 0) %>% 
+  dplyr::select(donor, Ferritin, Age, sex, TwoYearsFromStartCount_FB,Hb_v,CRP) %>% 
+  rename(
+    id = donor,
+    ferritin = Ferritin,
+    Hb = Hb_v,
+         age = Age,
+         nb_donations_2y = TwoYearsFromStartCount_FB) %>% 
+  mutate(cohort="FINDONOR")
+
+
+rm(dons,indiv_donations_data)
+
+data <- bind_rows(
+  findonor %>% select(-nb_donations_2y,Hb,CRP),
+  fr1997,
+  h2000
+)
+```
+
+
+
+
+The code expects a data-frame with one row per donor. The columns are donor (donor ID), ferritin, age, and sex.
+
+We remove new donors from the data since we are mainly interested in the prevalence in iron deficiency in repeat donors. As our dataset was not large, we could not stratify by previous donation frequency as is probably advisable (e.g., re-activated donors, low frequency donors and high frequency donors).
+
+We will stratify by 5-year age groups and sex to compute the prevalence of iron deficiency
+
+```{r }
+
+# head(data_for_modeling)
+# donor     ferritin      age       sex
+# <chr>     <dbl>         <dbl>    <fctr>
+
+
+##########################################
+# Create age group variable
+##########################################
+
+data_for_modeling <-
+  data %>% 
+  mutate(age_group = case_when(age < 25 ~ "18-24",
+                               age < 30 ~ "25-29",
+                               age < 35 ~ "30-34",
+                               age < 40 ~ "35-39",
+                               age < 45 ~ "40-44",
+                               age < 50 ~ "45-49",
+                               age < 55 ~ "50-54",
+                               age < 60 ~ "55-59",
+                               age < 65 ~ "60-64",
+                               TRUE ~ "65-70"))
+```
+
+
+## Sample sizes for each age and sex sub-group.
+
+```{r count}
+data_for_modeling %>% 
+  count(sex, age_group, cohort) %>% 
+  spread(key = age_group, value = n) %>% 
+  kable()%>%
+  kable_styling()
+```
+
+# Table 1 Ferritin
+
+```{r}
+
+myVars <- c("Age" ,
+  "Ferritin (ug/l)" 
+)
+non_normal_vars <- c("Ferritin (ug/l)")
+
+table1data <- data_for_modeling  %>%
+  rename(
+  "Age" = age,
+  "Ferritin (ug/l)" = ferritin
+)
+
+summary_table <- CreateTableOne(data = 
+                                  table1data,
+                                vars=myVars, 
+                                strata = c("cohort","sex"),
+                                test = FALSE)
+  
+tab3Mat <- print(summary_table, 
+                 nonnormal = non_normal_vars,
+                 vars=myVars, 
+                 quote = FALSE, 
+                 noSpaces = TRUE, 
+                 printToggle = FALSE)
+
+#
+colnames(tab3Mat) <- gsub("\\:",": ",colnames(tab3Mat))
+
+tab3Mat %>% 
+  kable() %>% 
+kable_styling(
+  full_width = F,
+  bootstrap_options = "striped", 
+  font_size = 8) %>% 
+  column_spec(
+    column = 2:7,
+    width = '1.5cm'
+  )
+  write.table(tab3Mat, 
+              file = paste0("../results//ferritin_stats/table_1_population.txt"),sep="\t")
+
+```
+On average general population men seem to have much higher ferritin then blood donor men while there is really no difference  between blood donor and general population women.
+
+# Histogram of ferritin
+
+```{r}
+p <- ggplot(data_for_modeling,aes(x=ferritin)) + 
+  geom_histogram(position = "dodge") +
+  scale_x_log10() + 
+  facet_grid(cohort~sex) + 
+  geom_vline(aes(xintercept=15))
+p
+ggsave(filename = "../results/ferritin_stats/hist_ferritin.png",
+        plot = p, 
+      width = 10,
+      height = 15,
+      dpi = 300,
+      units = "cm")
+
+```
+But general population left tails are much heavier than blood donor left tails.
+
+
+# Proportion of iron deficiency
+
+We compute the bootstrap distribution of the iron deficiency prevalence.
+
+```{r boot}
+######################################################################
+# Write function that computes ID prevalence in bootstrapped sample
+######################################################################
+
+get_proportions <- function(split){
+     analysis(split) %>% 
+      group_by(age_group ) %>% 
+      summarise(ID_proportion = mean(ferritin < 15)) %>% 
+     ungroup() %>% 
+    rename(term= age_group,
+           estimate= ID_proportion)
+}
+
+######################################################################
+# Compute bootstrapped samples for women
+######################################################################
+set.seed(215)
+boot.times <- 1000
+
+boot_fr_wo <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Women" & 
+                              cohort == "FINRISK"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+
+boot_fr_wo_prop <- 
+  boot_fr_wo %>% 
+    mutate(props = map(splits, get_proportions)) 
+
+boot_h2_wo <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Women" & 
+                              cohort == "H2000"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+boot_h2_wo_prop <- 
+  boot_h2_wo %>% 
+    mutate(props = map(splits, get_proportions)) 
+
+boot_fd_wo <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Women" & 
+                              cohort == "FINDONOR"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+boot_fd_wo_prop <- 
+  boot_fd_wo %>% 
+    mutate(props = map(splits, get_proportions)) 
+
+
+
+########################################################
+# Compute bootstrapped samples for men
+########################################################
+
+boot_fr_me <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Men" & 
+                              cohort == "FINRISK"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+
+boot_fr_me_prop <- 
+  boot_fr_me %>% 
+    mutate(props = map(splits, get_proportions)) 
+
+boot_h2_me <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Men" & 
+                              cohort == "H2000"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+boot_h2_me_prop <- 
+  boot_h2_me %>% 
+    mutate(props = map(splits, get_proportions)) 
+
+boot_fd_me <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Men" & 
+                              cohort == "FINDONOR"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+boot_fd_me_prop <- 
+  boot_fd_me %>% 
+    mutate(props = map(splits, get_proportions)) 
+
+```
+
+We compute and plot the prevalence and its 95% percentile confidence intervals  and save the figure externally if needed. 
+
+```{r }
+
+####################################################################################
+## Compute percentile 95% confidence intervals from bootstrapped distribution
+####################################################################################
+
+figure_data <- int_pctl(boot_fd_wo_prop, props) %>% 
+  mutate(sex = "Women",cohort="FinDonor") %>% 
+  bind_rows(int_pctl(boot_fd_me_prop, props) %>% 
+  mutate(sex = "Men",cohort="FinDonor") ) %>% 
+  bind_rows(int_pctl(boot_fr_wo_prop, props) %>% 
+  mutate(sex = "Women",cohort="FinRisk") ) %>% 
+  bind_rows(int_pctl(boot_fr_me_prop, props) %>% 
+  mutate(sex = "Men",cohort="FinRisk") ) %>% 
+  bind_rows(int_pctl(boot_h2_wo_prop, props) %>% 
+  mutate(sex = "Women",cohort="H2000") ) %>% 
+  bind_rows(int_pctl(boot_h2_me_prop, props) %>% 
+  mutate(sex = "Men",cohort="H2000") )
+```
+
+## Bootstrapped FinDonor
+
+```{r}
+
+figure  <- ggplot(
+  figure_data %>% filter(cohort=="FinDonor")
+                  ,aes(x = term, y = .estimate, ymin = .lower, ymax = .upper)) +
+ geom_crossbar(alpha = 0.35, 
+            fill = "grey",
+            color = "dark grey") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1),
+                     breaks = seq(0,.8, by = 0.05)) +
+  facet_wrap(sex~cohort) +
+    theme_few() +
+  xlab("Age") +
+  ylab("Prevalence of iron deficiency") +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 10),
+        strip.text =  element_text(size = 16),
+        axis.text.x = element_text(angle = 90)
+        )
+
+figure
+
+
+```
+
+
+## Bootstrapped all cohorts in facets
+
+```{r fig.width=10}  
+## plot prevalence and 95%CI of prevalence fir each 5 year age group
+figure  <- ggplot(figure_data,aes(x = term, y = .estimate, ymin = .lower, ymax = .upper)) +
+ geom_crossbar(alpha = 0.35, 
+            fill = "grey",
+            color = "dark grey") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1),
+                     breaks = seq(0,.8, by = 0.05)) +
+  facet_wrap(sex~cohort) +
+    theme_few() +
+  xlab("Age") +
+  ylab("Prevalence of iron deficiency") +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 10),
+        strip.text =  element_text(size = 16),
+        axis.text.x = element_text(angle = 90)
+        )
+
+figure
+
+####################################################################################
+## Save figure
+####################################################################################
+ggsave(filename = "../results/ferritin_stats/age_risk_ID.png",
+        plot = figure, 
+      width = 10,
+      height = 15,
+      dpi = 300,
+      units = "cm")
+```
+
+## Bootstrapped all cohorts together
+
+
+```{r fig.width=10}  
+## plot prevalence and 95%CI of prevalence fir each 5 year age group
+figure  <- ggplot(figure_data,aes(x = term, y = .estimate, ymin = .lower, ymax = .upper,fill = cohort)) +
+ geom_crossbar(alpha = 0.35, 
+                        color = "dark grey") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1),
+                     breaks = seq(0,.8, by = 0.05)) +
+  facet_grid(~sex) +
+    theme_few() +
+  xlab("Age") +
+  ylab("Prevalence of iron deficiency") +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 10),
+        strip.text =  element_text(size = 16),
+        axis.text.x = element_text(angle = 90)
+        )
+
+figure
+
+####################################################################################
+## Save figure
+####################################################################################
+ggsave(filename = "../results/ferritin_stats/age_risk_ID_col.png",
+        plot = figure, 
+      width = 10,
+      height = 15,
+      dpi = 300,
+      units = "cm")
+```
+
+Because of the heavy left tails the iron deciency proportions tell a completely different story than ferritin medians.
+
+## Recount of raw values
+
+```{r}
+original_prop <- data_for_modeling %>% mutate(iron_def = ferritin < 15) %>% group_by(sex,cohort,age_group) %>% summarise(
+  total_not = sum(iron_def == FALSE),
+   total_yes = sum(iron_def == TRUE) 
+  ) %>%
+    mutate(
+    prop = round(total_yes/ (total_not + total_yes ) *100,2)
+    ) %>%
+    select(-total_yes,-total_not)
+
+p <- ggplot(original_prop)
+p <- p + geom_point(aes(y=prop,x=age_group,color=cohort))
+p <- p + facet_wrap(~sex)
+
+p <- p + theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 10),
+        strip.text =  element_text(size = 16),
+        axis.text.x = element_text(angle = 90)
+        )
+
+p <- p +   xlab("Age") 
+p <- p +  ylab("Prevalence of iron deficiency") 
+p
+```
+
+# Hemoglobin data loading and preprocessing
+
+Hb measurements might not come from the same persons
+
+```{r}
+#Get id, hb, age and sex
+
+h2000 <- thldata$h2000 %>% 
+  select(RELEASE_ID,B_Hb, IKA2,SP2) %>%  
+  na.omit() %>% rename(id=RELEASE_ID,Hb=B_Hb,age=IKA2,sex=SP2) %>% 
+  mutate(sex= as.factor(sex),
+         cohort = "H2000" 
+  )
+levels(h2000$sex) <- c("Men","Women")
+
+
+
+fr1997 <- thldata$fr1997 %>% 
+  select(RELEASE_ID,HGB, IKA,SUKUP) %>%  
+  na.omit() %>% 
+  rename(id=RELEASE_ID,Hb=HGB,age=IKA,sex=SUKUP) %>% 
+  mutate(sex= as.factor(sex),
+         cohort = "FINRISK" 
+  )
+levels(fr1997$sex) <- c("Men","Women")
+
+
+data_hb <- bind_rows(
+  findonor %>% select(-nb_donations_2y,ferritin,CRP),
+  fr1997,
+  h2000
+)
+```
+
+
+```{r }
+
+# head(data_for_modeling)
+# donor     ferritin      age       sex
+# <chr>     <dbl>         <dbl>    <fctr>
+
+
+##########################################
+# Create age group variable
+##########################################
+
+data_for_modeling <-
+  data_hb %>% 
+  mutate(age_group = case_when(age < 25 ~ "18-24",
+                               age < 30 ~ "25-29",
+                               age < 35 ~ "30-34",
+                               age < 40 ~ "35-39",
+                               age < 45 ~ "40-44",
+                               age < 50 ~ "45-49",
+                               age < 55 ~ "50-54",
+                               age < 60 ~ "55-59",
+                               age < 65 ~ "60-64",
+                               TRUE ~ "65-70"))
+
+
+#add anemia limits
+data_for_modeling <- data_for_modeling %>% 
+  mutate(limit  = case_when( sex == "Women" ~ 117,
+                             sex == "Men" ~ 134
+    
+    )
+  )
+
+
+```
+
+
+
+## Sample sizes for each age and sex sub-group.
+
+```{r count_hb}
+data_for_modeling %>% 
+  count(sex, age_group, cohort) %>% 
+  spread(key = age_group, value = n) %>% 
+  kable()%>%
+  kable_styling()
+
+
+
+```
+
+```{r}
+#Drop out FINRISK as I suspect some selection bias..
+
+#data_for_modeling <- data_for_modeling %>% filter(! cohort == "FINRISK")
+
+```
+
+# Table 1 Haemglobin
+
+```{r}
+
+myVars <- c("Age" ,
+  "Haemoglobin (g/l)" 
+)
+#non_normal_vars <- c("Ferritin (ug/l)")
+
+table1data <- data_for_modeling  %>%
+  rename(
+  "Age" = age,
+  "Haemoglobin (g/l)" = Hb
+)
+
+summary_table <- CreateTableOne(data = 
+                                  table1data,
+                                vars=myVars, 
+                                strata = c("cohort","sex"),
+                                test = FALSE)
+  
+tab3Mat <- print(summary_table, 
+#                 nonnormal = non_normal_vars,
+                 vars=myVars, 
+                 quote = FALSE, 
+                 noSpaces = TRUE, 
+                 printToggle = FALSE)
+
+#
+colnames(tab3Mat) <- gsub("\\:",": ",colnames(tab3Mat))
+
+tab3Mat %>% 
+  kable() %>% 
+kable_styling(
+  full_width = F,
+  bootstrap_options = "striped", 
+  font_size = 8
+  ) %>% 
+  column_spec(
+    column = 2:7, #changes if we take FINRISK out
+    width = '1.5cm'
+  )
+  write.table(tab3Mat, 
+              file = paste0("../results//ferritin_stats/table_1_population_hb.txt"),sep="\t")
+
+```
+# Histogram of haemoglobin
+
+```{r}
+
+p <- ggplot(data_for_modeling,aes(x=Hb)) + 
+  geom_histogram(position = "dodge") +
+  facet_grid(cohort~sex) + 
+  geom_vline(aes(xintercept=limit,col=sex)) 
+p
+ggsave(filename = "../results/ferritin_stats/hist_hb.png",
+        plot = p, 
+      width = 10,
+      height = 15,
+      dpi = 300,
+      units = "cm")
+
+```
+
+
+# Proportion of anemia
+
+We compute the bootstrap distribution of the iron deficiency prevalence.
+
+```{r boot_hb}
+######################################################################
+# Write function that computes ID prevalence in bootstrapped sample
+######################################################################
+
+get_proportions_m <- function(split){
+     analysis(split) %>% 
+      group_by(age_group ) %>% 
+      summarise(ID_proportion = mean(Hb < 134)) %>% 
+     ungroup() %>% 
+    rename(term= age_group,
+           estimate= ID_proportion)
+}
+
+get_proportions_f <- function(split){
+     analysis(split) %>% 
+      group_by(age_group ) %>% 
+      summarise(ID_proportion = mean(Hb < 117)) %>% 
+     ungroup() %>% 
+    rename(term= age_group,
+           estimate= ID_proportion)
+}
+
+
+######################################################################
+# Compute bootstrapped samples for women
+######################################################################
+set.seed(215)
+boot.times <- 1000
+
+boot_h2_wo <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Women" & 
+                              cohort == "H2000"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+boot_h2_wo_prop <- 
+  boot_h2_wo %>% 
+    mutate(props = map(splits, get_proportions_f)) 
+
+boot_fd_wo <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Women" & 
+                              cohort == "FINDONOR"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+boot_fd_wo_prop <- 
+  boot_fd_wo %>% 
+    mutate(props = map(splits, get_proportions_f)) 
+
+
+
+########################################################
+# Compute bootstrapped samples for men
+########################################################
+
+
+boot_h2_me <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Men" & 
+                              cohort == "H2000"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+boot_h2_me_prop <- 
+  boot_h2_me %>% 
+    mutate(props = map(splits, get_proportions_m)) 
+
+boot_fd_me <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Men" & 
+                              cohort == "FINDONOR"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+boot_fd_me_prop <- 
+  boot_fd_me %>% 
+    mutate(props = map(splits, get_proportions_m)) 
+
+```
+
+We compute and plot the prevalence and its 95% percentile confidence intervals  and save the figure externally if needed. 
+
+```{r }
+
+####################################################################################
+## Compute percentile 95% confidence intervals from bootstrapped distribution
+####################################################################################
+
+figure_data <- int_pctl(boot_fd_wo_prop, props) %>% 
+  mutate(sex = "Women",cohort="FinDonor") %>% 
+  bind_rows(int_pctl(boot_fd_me_prop, props) %>% 
+  mutate(sex = "Men",cohort="FinDonor") ) %>% 
+  bind_rows(int_pctl(boot_h2_wo_prop, props) %>% 
+  mutate(sex = "Women",cohort="H2000") ) %>% 
+  bind_rows(int_pctl(boot_h2_me_prop, props) %>% 
+  mutate(sex = "Men",cohort="H2000") )
+```
+
+## Bootstrapped FinDonor
+
+```{r}
+
+figure  <- ggplot(
+  figure_data %>% filter(cohort=="FinDonor")
+                  ,aes(x = term, y = .estimate, ymin = .lower, ymax = .upper)) +
+ geom_crossbar(alpha = 0.35, 
+            fill = "grey",
+            color = "dark grey") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1),
+                     breaks = seq(0,.8, by = 0.05)) +
+  facet_wrap(sex~cohort) +
+    theme_few() +
+  xlab("Age") +
+  ylab("Prevalence of anemia") +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 10),
+        strip.text =  element_text(size = 16),
+        axis.text.x = element_text(angle = 90)
+        )
+
+figure
+
+
+```
+
+
+## Bootstrapped all cohorts in facets
+
+```{r fig.width=10}  
+## plot prevalence and 95%CI of prevalence fir each 5 year age group
+figure  <- ggplot(figure_data,aes(x = term, y = .estimate, ymin = .lower, ymax = .upper)) +
+ geom_crossbar(alpha = 0.35, 
+            fill = "grey",
+            color = "dark grey") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1),
+                     breaks = seq(0,.8, by = 0.05)) +
+  facet_wrap(sex~cohort) +
+    theme_few() +
+  xlab("Age") +
+  ylab("Prevalence of anemia") +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 10),
+        strip.text =  element_text(size = 16),
+        axis.text.x = element_text(angle = 90)
+        )
+
+figure
+
+####################################################################################
+## Save figure
+####################################################################################
+ggsave(filename = "../results/ferritin_stats/age_risk_anemia.png",
+        plot = figure, 
+      width = 10,
+      height = 15,
+      dpi = 300,
+      units = "cm")
+```
+
+## Bootstrapped all cohorts together
+
+
+```{r fig.width=10}  
+## plot prevalence and 95%CI of prevalence fir each 5 year age group
+figure  <- ggplot(figure_data,aes(x = term, y = .estimate, ymin = .lower, ymax = .upper,fill = cohort)) +
+ geom_crossbar(alpha = 0.35, 
+                        color = "dark grey") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1),
+                     breaks = seq(0,.8, by = 0.05)) +
+  facet_grid(~sex) +
+    theme_few() +
+  xlab("Age") +
+  ylab("Prevalence of anemia") +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 10),
+        strip.text =  element_text(size = 16),
+        axis.text.x = element_text(angle = 90)
+        )
+
+figure
+
+####################################################################################
+## Save figure
+####################################################################################
+ggsave(filename = "../results/ferritin_stats/age_risk_anemia_col.png",
+        plot = figure, 
+      width = 10,
+      height = 15,
+      dpi = 300,
+      units = "cm")
+```
+
+
+## Recount of raw values
+
+```{r}
+original_prop <- data_for_modeling %>% 
+  mutate(anemia = 
+           case_when(Hb < limit ~ TRUE,
+                     TRUE ~ FALSE
+             
+           ) 
+         ) %>% 
+  group_by(sex,cohort,age_group) %>% 
+  summarise(
+  total_not = sum(anemia == FALSE),
+   total_yes = sum(anemia == TRUE) 
+  ) %>%
+    mutate(
+    prop = round(total_yes/ (total_not + total_yes ) *100,2)
+    ) %>%
+    select(-total_yes,-total_not)
+
+p <- ggplot(original_prop)
+p <- p + geom_point(aes(y=prop,x=age_group,color=cohort))
+p <- p + facet_wrap(~sex)
+
+p <- p + theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 10),
+        strip.text =  element_text(size = 16),
+        axis.text.x = element_text(angle = 90)
+        )
+
+p <- p +   xlab("Age") 
+p <- p +  ylab("Prevalence of anemia") 
+p
+```
+
+# CRP data loading and preprocessing
+
+CRP measurements might not come from the same persons
+
+```{r}
+#Get id, crp, age and sex
+
+h2000 <- thldata$h2000 %>% 
+  select(RELEASE_ID,CRP, IKA2,SP2) %>%  
+  na.omit() %>% rename(id=RELEASE_ID,age=IKA2,sex=SP2) %>% 
+  mutate(sex= as.factor(sex),
+         cohort = "H2000" 
+  )
+levels(h2000$sex) <- c("Men","Women")
+
+
+
+fr1997 <- thldata$fr1997 %>% 
+  select(RELEASE_ID,CRP, IKA,SUKUP) %>%  
+  na.omit() %>% 
+  rename(id=RELEASE_ID,age=IKA,sex=SUKUP) %>% 
+  mutate(sex= as.factor(sex),
+         cohort = "FINRISK97" 
+  )
+levels(fr1997$sex) <- c("Men","Women")
+
+fr1997bm <- thldata$fr1997 %>% 
+  select(RELEASE_ID,CRPbm, IKA,SUKUP) %>%  
+  na.omit() %>% 
+  rename(id=RELEASE_ID,age=IKA,sex=SUKUP) %>% 
+  mutate(sex= as.factor(sex),
+         cohort = "FINRISK97" 
+  )
+levels(fr1997bm$sex) <- c("Men","Women")
+
+```
+
+
+```{r}
+length(intersect(fr1997$id,fr1997bm$id))
+```
+
+All who have original CRP have also BM consortia CRP.
+
+```{r}
+tmp <- fr1997 %>% left_join(fr1997bm,by=c("id"="id"))
+p <- ggplot(tmp)
+p <- p +  geom_point(aes(x=CRP,y=CRPbm))
+p <- p + geom_smooth(aes(x=CRP,y=CRPbm),method = "lm")
+p
+
+```
+
+Hmm, well let's use the CRP from the BM data as that is where the ferritin comes from.
+
+
+```{r} 
+#so what is the difference here, which do we use and why?
+
+fr1997 <- fr1997bm %>% rename(CRP=CRPbm)
+rm(fr1997bm)
+
+fr2002 <- thldata$fr2002 %>% 
+  select(RELEASE_ID,CRP, IKA,SUKUP) %>%  
+  na.omit() %>% 
+  rename(id=RELEASE_ID,age=IKA,sex=SUKUP) %>% 
+  mutate(sex= as.factor(sex),
+         cohort = "FINRISK02" 
+  )
+levels(fr2002$sex) <- c("Men","Women")
+
+fr2012 <- thldata$fr2012 %>% 
+  select(RELEASE_ID,CRP, IKA,SUKUP) %>%  
+  na.omit() %>% 
+  rename(id=RELEASE_ID,age=IKA,sex=SUKUP) %>% 
+  mutate(sex= as.factor(sex),
+         cohort = "FINRISK12" 
+  )
+levels(fr2012$sex) <- c("Men","Women")
+
+
+data_crp <- bind_rows(
+  findonor %>% select(-nb_donations_2y,ferritin,Hb),
+  fr1997,
+  h2000,
+  fr2002,
+  fr2012
+)
+```
+
+
+```{r }
+
+# head(data_for_modeling)
+# donor     ferritin      age       sex
+# <chr>     <dbl>         <dbl>    <fctr>
+
+
+##########################################
+# Create age group variable
+##########################################
+
+data_for_modeling <-
+  data_crp %>% 
+  mutate(age_group = case_when(age < 25 ~ "18-24",
+                               age < 30 ~ "25-29",
+                               age < 35 ~ "30-34",
+                               age < 40 ~ "35-39",
+                               age < 45 ~ "40-44",
+                               age < 50 ~ "45-49",
+                               age < 55 ~ "50-54",
+                               age < 60 ~ "55-59",
+                               age < 65 ~ "60-64",
+                               TRUE ~ "65-70"))
+
+
+
+```
+
+
+
+# Table 1 CRP
+
+```{r}
+
+myVars <- c("Age" ,
+  "CRP (mg/l)" 
+)
+non_normal_vars <- c("CRP (mg/l)")
+
+table1data <- data_for_modeling  %>%
+  rename(
+  "Age" = age,
+  "CRP (mg/l)" = CRP
+)
+
+summary_table <- CreateTableOne(data = 
+                                  table1data,
+                                vars=myVars, 
+                                strata = c("cohort","sex"),
+                                test = FALSE)
+  
+tab3Mat <- print(summary_table, 
+                 nonnormal = non_normal_vars,
+                 vars=myVars, 
+                 quote = FALSE, 
+                 noSpaces = TRUE, 
+                 printToggle = FALSE)
+
+#
+colnames(tab3Mat) <- gsub("\\:",": ",colnames(tab3Mat))
+
+tab3Mat %>% 
+  kable() %>% 
+kable_styling(
+  full_width = F,
+  bootstrap_options = "striped", 
+  font_size = 8) %>% 
+  column_spec(
+    column = 2:13,
+    width = '1cm'
+  )
+  write.table(tab3Mat, 
+              file = paste0("../results//ferritin_stats/table_1_population_crp.txt"),sep="\t")
+
+```
+On average general population men seem to have much higher ferritin then blood donor men while there is really no difference
+
+# Histogram of CRP
+
+```{r}
+p <- ggplot(data_for_modeling,aes(x=CRP)) + 
+  geom_histogram(position = "dodge") +
+  scale_x_log10() + 
+  facet_grid(cohort~sex) + 
+  geom_vline(aes(xintercept=3))
+p
+ggsave(filename = "../results/ferritin_stats/hist_crp.png",
+        plot = p, 
+      width = 10,
+      height = 15,
+      dpi = 300,
+      units = "cm")
+
+```
+```{r}
+summary(findonor$CRP)
+```
+
+We can only consider the question of whether the CRP is bigger than 4 and still they might not be comparable.
+
+
+
+# Proportion of CRP >= 4
+
+We compute the bootstrap distribution of the CRP >= 4  prevalence which is the current cut-off for HUSLAB.
+
+```{r boot_crp}
+######################################################################
+# Write function that computes ID prevalence in bootstrapped sample
+######################################################################
+
+get_proportions <- function(split){
+     analysis(split) %>% 
+      group_by(age_group ) %>% 
+      summarise(ID_proportion = mean(CRP >= 4)) %>% 
+     ungroup() %>% 
+    rename(term= age_group,
+           estimate= ID_proportion)
+}
+
+######################################################################
+# Compute bootstrapped samples for women
+######################################################################
+set.seed(215)
+boot.times <- 1000
+
+boot_fr97_wo <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Women" & 
+                              cohort == "FINRISK97"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+
+boot_fr97_wo_prop <- 
+  boot_fr97_wo %>% 
+    mutate(props = map(splits, get_proportions)) 
+
+boot_fr02_wo <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Women" & 
+                              cohort == "FINRISK02"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+
+boot_fr02_wo_prop <- 
+  boot_fr02_wo %>% 
+    mutate(props = map(splits, get_proportions)) 
+
+
+boot_fr12_wo <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Women" & 
+                              cohort == "FINRISK12"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+boot_fr12_wo_prop <- 
+  boot_fr12_wo %>% 
+    mutate(props = map(splits, get_proportions)) 
+
+
+boot_h2_wo <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Women" & 
+                              cohort == "H2000"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+boot_h2_wo_prop <- 
+  boot_h2_wo %>% 
+    mutate(props = map(splits, get_proportions)) 
+
+boot_fd_wo <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Women" & 
+                              cohort == "FINDONOR"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+boot_fd_wo_prop <- 
+  boot_fd_wo %>% 
+    mutate(props = map(splits, get_proportions)) 
+
+
+
+########################################################
+# Compute bootstrapped samples for men
+########################################################
+
+boot_fr97_me <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Men" & 
+                              cohort == "FINRISK97"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+
+boot_fr97_me_prop <- 
+  boot_fr97_me %>% 
+    mutate(props = map(splits, get_proportions)) 
+
+boot_fr02_me <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Men" & 
+                              cohort == "FINRISK02"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+
+boot_fr02_me_prop <- 
+  boot_fr02_me %>% 
+    mutate(props = map(splits, get_proportions)) 
+
+
+boot_fr12_me <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Men" & 
+                              cohort == "FINRISK12"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+boot_fr12_me_prop <- 
+  boot_fr12_me %>% 
+    mutate(props = map(splits, get_proportions)) 
+
+boot_h2_me <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Men" & 
+                              cohort == "H2000"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+boot_h2_me_prop <- 
+  boot_h2_me %>% 
+    mutate(props = map(splits, get_proportions)) 
+
+boot_fd_me <- bootstraps(data_for_modeling %>% 
+                          filter(
+                            sex == "Men" & 
+                              cohort == "FINDONOR"),
+                        times = boot.times,
+                        strata = "age_group",
+                        apparent = TRUE)
+
+boot_fd_me_prop <- 
+  boot_fd_me %>% 
+    mutate(props = map(splits, get_proportions)) 
+
+```
+
+We compute and plot the prevalence and its 95% percentile confidence intervals  and save the figure externally if needed. 
+
+```{r }
+
+####################################################################################
+## Compute percentile 95% confidence intervals from bootstrapped distribution
+####################################################################################
+
+figure_data <- int_pctl(boot_fd_wo_prop, props) %>% 
+  mutate(sex = "Women",cohort="FinDonor") %>% 
+  bind_rows(int_pctl(boot_fd_me_prop, props) %>% 
+  mutate(sex = "Men",cohort="FinDonor") ) %>% 
+  bind_rows(int_pctl(boot_fr97_wo_prop, props) %>% 
+  mutate(sex = "Women",cohort="FinRisk97") ) %>% 
+  bind_rows(int_pctl(boot_fr97_me_prop, props) %>% 
+  mutate(sex = "Men",cohort="FinRisk97") ) %>% 
+  bind_rows(int_pctl(boot_fr02_wo_prop, props) %>% 
+  mutate(sex = "Women",cohort="FinRisk02") ) %>% 
+  bind_rows(int_pctl(boot_fr02_me_prop, props) %>% 
+  mutate(sex = "Men",cohort="FinRisk02") ) %>% 
+  bind_rows(int_pctl(boot_fr12_wo_prop, props) %>% 
+  mutate(sex = "Women",cohort="FinRisk12") ) %>% 
+  bind_rows(int_pctl(boot_fr12_me_prop, props) %>% 
+  mutate(sex = "Men",cohort="FinRisk12") ) %>% 
+  bind_rows(int_pctl(boot_h2_wo_prop, props) %>% 
+  mutate(sex = "Women",cohort="H2000") ) %>% 
+  bind_rows(int_pctl(boot_h2_me_prop, props) %>% 
+  mutate(sex = "Men",cohort="H2000") )
+```
+
+## Bootstrapped FinDonor
+
+```{r}
+
+figure  <- ggplot(
+  figure_data %>% filter(cohort=="FinDonor")
+                  ,aes(x = term, y = .estimate, ymin = .lower, ymax = .upper)) +
+ geom_crossbar(alpha = 0.35, 
+            fill = "grey",
+            color = "dark grey") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1),
+                     breaks = seq(0,.8, by = 0.05)) +
+  facet_wrap(sex~cohort) +
+    theme_few() +
+  xlab("Age") +
+  ylab("Prevalence of high CRP ") +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 10),
+        strip.text =  element_text(size = 16),
+        axis.text.x = element_text(angle = 90)
+        )
+
+figure
+
+
+```
+
+
+## Bootstrapped all cohorts in facets
+
+```{r fig.width=10}  
+## plot prevalence and 95%CI of prevalence fir each 5 year age group
+figure  <- ggplot(figure_data,aes(x = term, y = .estimate, ymin = .lower, ymax = .upper)) +
+ geom_crossbar(alpha = 0.35, 
+            fill = "grey",
+            color = "dark grey") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1),
+                     breaks = seq(0,.8, by = 0.05)) +
+  facet_wrap(sex~cohort) +
+    theme_few() +
+  xlab("Age") +
+  ylab("Prevalence of high CRP") +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 10),
+        strip.text =  element_text(size = 16),
+        axis.text.x = element_text(angle = 90)
+        )
+
+figure
+
+####################################################################################
+## Save figure
+####################################################################################
+ggsave(filename = "../results/ferritin_stats/age_risk_inf.png",
+        plot = figure, 
+      width = 10,
+      height = 15,
+      dpi = 300,
+      units = "cm")
+```
+
+## Bootstrapped all cohorts together
+
+
+```{r fig.width=10}  
+## plot prevalence and 95%CI of prevalence fir each 5 year age group
+figure  <- ggplot(figure_data,aes(x = term, y = .estimate, ymin = .lower, ymax = .upper,fill = cohort)) +
+ geom_crossbar(alpha = 0.35, 
+                        color = "dark grey") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1),
+                     breaks = seq(0,.8, by = 0.05)) +
+  facet_grid(~sex) +
+    theme_few() +
+  xlab("Age") +
+  ylab("Prevalence of high CRP") +
+  theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 10),
+        strip.text =  element_text(size = 16),
+        axis.text.x = element_text(angle = 90)
+        )
+
+figure
+
+####################################################################################
+## Save figure
+####################################################################################
+ggsave(filename = "../results/ferritin_stats/age_risk_inf_col.png",
+        plot = figure, 
+      width = 10,
+      height = 15,
+      dpi = 300,
+      units = "cm")
+```
+
+
+
+## Recount of raw values
+
+```{r}
+original_prop <- data_for_modeling %>% mutate(infla = CRP >= 4) %>% group_by(sex,cohort,age_group) %>% summarise(
+  total_not = sum(infla == FALSE),
+   total_yes = sum(infla == TRUE) 
+  ) %>%
+    mutate(
+    prop = round(total_yes/ (total_not + total_yes ) *100,2)
+    ) %>%
+    select(-total_yes,-total_not)
+
+p <- ggplot(original_prop)
+p <- p + geom_point(aes(y=prop,x=age_group,color=cohort))
+p <- p + facet_wrap(~sex)
+
+p <- p + theme(axis.title = element_text(size = 16),
+        axis.text = element_text(size = 10),
+        strip.text =  element_text(size = 16),
+        axis.text.x = element_text(angle = 90)
+        )
+
+p <- p +   xlab("Age") 
+p <- p +  ylab("Prevalence of high CRP") 
+p
+```
