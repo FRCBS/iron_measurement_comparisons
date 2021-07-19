@@ -1,18 +1,19 @@
 ---
 title: "Low ferritin model"
-author: "Muriel Lobier"
+author: "Sofie Ekroos"
+date: "19.7.2021"
 output: github_document
 bibliography: index.bib
 ---
 
-# Executive summary 
+Based is based on Muriel Lobier's original code (https://github.com/FRCBS/iron_levels_of_blood_donors/blob/master/src/index.Rmd AND CHANGES IN DONOR HEALTH, ADD LINK!!)
 
-This document includes all code necessary to run the analysis and produce the figures of : *Insert title here* Insert authors here. 
+# Summary
 
-The analysis has XXX parts. In a first part we describe the cohorts and compute the prevalence of iron deficiency. In a second part, we use multivariate linear regression to identify the factors that co-vary with iron levels (using ferritin) in the blood donor and regular population.  
+This document includes all codes necessary to run the analysis of and produce the figures for the three Finnish Cohorts (FinDonor, FINRISK97, Health2000). The code allows the user to:
 
-
-#SEVERAL PACKAGES WON'T INSTALL???????
+- describe the cohorts and compute the prevalence of iron deficiency
+- identify co-variants of iron deficiency using multivariable linear regression 
 
 ```{r setup, , message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -469,8 +470,8 @@ test_data_std <- blood_data_summary_reg %>%
 ```{r}
 
 ggpairs(test_data_std, 
-        columns = c("log_ferr", "age", "log_CRP",  "BMI", "don_ct", "don_ct_2",
-                    "log_last_don", "smoking","iron"),
+        columns = c("log_ferr", "age", "log_CRP",  "don_ct", "don_ct_2",
+                    "log_last_don"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
@@ -479,7 +480,7 @@ ggpairs(test_data_std,
 ```{r}
 
 ggpairs(test_data_std, 
-        columns = c("log_ferr", "pregnancy",  "red_meat_n"),
+        columns = c("log_ferr", "pregnancy",  "red_meat_n", "smoking", "iron", "BMI"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
@@ -493,6 +494,7 @@ ggpairs(test_data_std,
 #          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
 #                       combo = wrap("facethist", binwidth = 0.5)),
 #         progress = FALSE)
+
 ```
 
 #### OLS 
