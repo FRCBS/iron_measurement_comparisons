@@ -487,29 +487,124 @@ ggpairs(test_data_std,
 ```
 
 
+# Correlogram for age
+
 ```{r}
 
-# ggpairs(test_data_std, 
-#         columns = c("log_ferr", "coffee_n", "tea_n", "beer_n", "wine_n", "liquor_n"),
-#          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-#                       combo = wrap("facethist", binwidth = 0.5)),
-#         progress = FALSE)
-
+ggpairs(test_data_std, 
+        columns = c("log_ferr", "age"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
 ```
 
-<!-- #### OLS  -->
+# correlogram log CRP 
 
-<!-- ```{r } -->
+```{r}
 
-<!-- # lm7_pre_menop_std <-lm(log_ferr ~ age + BMI + log_CRP + smoking + pregnancy  + don_ct + don_ct_2 +  -->
-<!-- #                          log_last_don + iron + red_meat_n + vegetables_n + fruit_berries_n + milk_n + -->
-<!-- #                          fruit_juices_n +  coffee_n +  tea_n + beer_n + wine_n + liquor_n, test_data_std ) -->
+ggpairs(test_data_std, 
+        columns = c("log_ferr", "log_CRP"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+```
 
-<!-- ``` -->
+# correlogram donation count 
+
+```{r}
+
+ggpairs(test_data_std, 
+        columns = c("log_ferr", "don_ct"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+```
+
+# correlogram donation count 2 
+
+```{r}
+
+ggpairs(test_data_std, 
+        columns = c("log_ferr", "don_ct_2"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+```
+
+# correlogram log last donation
+
+```{r}
+
+ggpairs(test_data_std, 
+        columns = c("log_ferr", "log_last_don"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+```
+
+# correlogram pregnancy (QR83=have you given birth? yes/no)
+
+```{r}
+
+ggpairs(test_data_std, 
+        columns = c("log_ferr", "pregnancy"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+```
+
+# correlogram red meat
+
+```{r}
+
+ggpairs(test_data_std, 
+        columns = c("log_ferr", "red_meat_n"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+```
+
+# correlogram smoking 
+
+```{r}
+
+ggpairs(test_data_std, 
+        columns = c("log_ferr", "smoking"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+```
+
+# correlogram iron supplements 
+
+```{r}
+
+ggpairs(test_data_std, 
+        columns = c("log_ferr", "iron"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+```
+
+# correlogram BMI
+
+```{r}
+
+ggpairs(test_data_std, 
+        columns = c("log_ferr", "BMI"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+```
 
 
 
-### logistical regression 
+
+
+
+
+
+# PART 3: LOGISTICAL REGRESSION
   
 ```{r setup, include=FALSE}
 Sys.setlocale("LC_MESSAGES", 'en_GB.UTF-8')
@@ -1222,4 +1317,3 @@ p
 ```
 
 
-   
