@@ -51,16 +51,26 @@ library(sjmisc)
 
 ```{r , warning=FALSE}
 
+#FinDonor data
 load("../data/r02.fd.bd.all.rdata")
-
 indiv_donations_data <- output
-
 rm(output)
+
+#FinDonor demographic data
+load("../data/r02ds.donorData.rdata")
+dons <- output
+rm(output)
+
+#THL data
+load("../data/thldata.rdata")
+#thldalta.rdata contrains all five THL cohorts, get FINRISK97 and Health2000
+fr1997 <- thldata$fr1997
+h2000 <- thldata$h2000
+rm(thldata)
 ```
 
 
 ## Load Data
-
 
 There are `r indiv_donations_data %>% distinct(donor) %>% nrow()` donors enrolled in the study. 
 
@@ -69,7 +79,7 @@ There are `r indiv_donations_data %>%  filter(!is.na(Ferritin) & !is.na(Hb_v) ) 
 
 
 ```{r , warning=FALSE}
-# Get sex for each donor
+# Get sex for each blood donor
 blood_data_summary <- indiv_donations_data %>% 
   group_by(donor) %>% 
   summarise(sex=first(gender)) 
@@ -84,17 +94,17 @@ blood_values_init <- indiv_donations_data %>%
   filter(!is.na(Ferritin) & !is.na(Hb_v) ) %>% 
   group_by(donor) %>% 
   filter(date == min(date)) %>% 
-  dplyr::select(age,TransferrinR, Ferritin,Hb_v,CRP,DaysToPreviousFB, MCV, donor) %>% 
+  dplyr::select(age, Ferritin,Hb_v,CRP,DaysToPreviousFB, MCV, donor) %>% 
   ungroup()
 
 
 blood_data_summary <- blood_data_summary %>% 
   full_join(blood_values_init, by = "donor") 
 
-# We now add the demographic data
-load("../data/r02ds.donorData.rdata")
-dons <- output
-rm(output)
+# # We now add the demographic data
+# load("../data/r02ds.donorData.rdata")
+# dons <- output
+# rm(output)
 
 
 blood_data_summary <- dons %>%
@@ -102,11 +112,9 @@ blood_data_summary <- dons %>%
   mutate(all_study_FB_donation_count = NonFinnDonorDonationCount_FB + YesFinnDonorDonationCount_FB) 
 ```
 
-
 ## Demographic group specification and assignment
 
 There are `r blood_data_summary %>% filter(sex == "Women" & is.na(QR79)) %>%  nrow()` women with no  answer to the question regarding their menstrual status. Of these, `r blood_data_summary %>% filter(sex == "Women" & is.na(QR79) & age > 65) %>%  nrow()` are older than 65. We impute these to  no period so they can be included in the post-menopausal women. Other women are all under 55, thus their menstrual status cannot be ascertained. 
-
 
 ```{r}
 older_donors <- filter(blood_data_summary, 
