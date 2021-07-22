@@ -44,33 +44,37 @@ library(ordinal)
 library(sjmisc)
 #library(sjlabelled)
 # library(lazerhawk)
+library(epiDisplay)
+library(safeBinaryRegression)
+library(epitools)
+library(ez)
+library(ggbeeswarm)
+library(tidymodels)
 ```
-
 
 # Data loading and preparation
 
 ```{r , warning=FALSE}
 
-#FinDonor data
+#load FinDonor biomarker data
 load("../data/r02.fd.bd.all.rdata")
 indiv_donations_data <- output
 rm(output)
 
-#FinDonor demographic data
+#load FinDonor demographic data
 load("../data/r02ds.donorData.rdata")
-dons <- output
+donor_demo <- output
 rm(output)
 
 #THL data
 load("../data/thldata.rdata")
-#thldalta.rdata contrains all five THL cohorts, get FINRISK97 and Health2000
+#thldalta.rdata contains all five THL cohorts, extract FINRISK97 and Health2000 from the others 
 fr1997 <- thldata$fr1997
 h2000 <- thldata$h2000
 rm(thldata)
 ```
 
-
-## Load Data
+## Data preparation
 
 There are `r indiv_donations_data %>% distinct(donor) %>% nrow()` donors enrolled in the study. 
 
@@ -79,57 +83,103 @@ There are `r indiv_donations_data %>%  filter(!is.na(Ferritin) & !is.na(Hb_v) ) 
 
 
 ```{r , warning=FALSE}
-# Get sex for each blood donor
+#FINDONOR
+## Assign all blood donors to FINDONOR cohort
+indiv_donations_data$cohort <- c("FINDONOR")
+
+## Get sex for each blood donor
 blood_data_summary <- indiv_donations_data %>% 
   group_by(donor) %>% 
   summarise(sex=first(gender)) 
 
-# Get values for first study donation with the required measurements 
-# donation (regardless of donation type)
-# We remove events with no Ferritin and hb_v to be inline with from when 
-# the nb of previous donations were counted.
+## Get values for first study donation with the required measurements 
+## donation (regardless of donation type)
+## We remove events with no Ferritin and hb_v to be inline with from when 
+## the nb of previous donations were counted.
 
 
 blood_values_init <- indiv_donations_data %>% 
   filter(!is.na(Ferritin) & !is.na(Hb_v) ) %>% 
   group_by(donor) %>% 
   filter(date == min(date)) %>% 
-  dplyr::select(age, Ferritin,Hb_v,CRP,DaysToPreviousFB, MCV, donor) %>% 
+  dplyr::select(age, Ferritin, Hb_v, CRP, DaysToPreviousFB, donor, cohort) %>% 
   ungroup()
 
 
 blood_data_summary <- blood_data_summary %>% 
   full_join(blood_values_init, by = "donor") 
 
-# # We now add the demographic data
-# load("../data/r02ds.donorData.rdata")
-# dons <- output
-# rm(output)
 
-
-blood_data_summary <- dons %>%
+blood_data_summary <- donor_demo %>%
   inner_join(blood_data_summary, by = "donor") %>%
   mutate(all_study_FB_donation_count = NonFinnDonorDonationCount_FB + YesFinnDonorDonationCount_FB) 
+
+#FINRISK97
+## Assign all FinRisk97 paprticipants to FINRISK97 cohort
+fr1997$cohort <- c("FINRISK97")
+
+## Change term for sex from binary 1,2 to men, women
+fr1997$SUKUP <- gsub("1", "Men", fr1997$SUKUP)
+fr1997$SUKUP <- gsub("2", "Women", fr1997$SUKUP)  
+
+#HEALTH2000
+## Assign all Health2000 participants to HEALTH2000 cohort
+
+h2000$cohort <- c("HEALTH00")
+
+## Change term for sex from binary 1,2 to men, women
+h2000$SP2 <- gsub("1", "Men", h2000$SP2)
+h2000$SP2 <- gsub("2", "Women", h2000$SP2)  
+
+
 ```
 
 ## Demographic group specification and assignment
 
-There are `r blood_data_summary %>% filter(sex == "Women" & is.na(QR79)) %>%  nrow()` women with no  answer to the question regarding their menstrual status. Of these, `r blood_data_summary %>% filter(sex == "Women" & is.na(QR79) & age > 65) %>%  nrow()` are older than 65. We impute these to  no period so they can be included in the post-menopausal women. Other women are all under 55, thus their menstrual status cannot be ascertained. 
+Assign women to period/no period groups
+
+FINDONOR:
+There are `r blood_data_summary %>% filter(sex == "Women" & is.na(QR79)) %>%  nrow()` women with no  answer to the question regarding their menstrual status (do you still have regular periods?). Of these, `r blood_data_summary %>% filter(sex == "Women" & is.na(QR79) & age > 65) %>%  nrow()` are older than 65. We impute these to  no period so they can be included in the post-menopausal women. Other women are all under 55, thus their menstrual status cannot be ascertained. 
+
+FINRISK97:
+There are `r fr1997 %>% filter(SUKUP == "Women" & is.na(K129)) %>%  nrow()` women with no  answer to the question regarding their menstrual status (do you still menstruate?). Of these, `r blood_data_summary %>% filter(sex == "Women" & is.na(QR79) & age > 65) %>%  nrow()` are older than 65. We impute these to  no period so they can be included in the post-menopausal women. Other women are all under 55, thus their menstrual status cannot be ascertained. 
+
+
+HEALTH2000:
+
+
 
 ```{r}
-older_donors <- filter(blood_data_summary, 
+# FINDONOR
+older_findonor_donors <- filter(blood_data_summary, 
                        sex == "Women" & is.na(QR79) & age > 55)$donor
 
 blood_data_summary <- blood_data_summary %>% 
-  mutate(QR79 = ifelse(donor %in% older_donors, "no_period", as.character(QR79))) 
+  mutate(QR79 = ifelse(donor %in% older_findonor_donors, "no_period", as.character(QR79))) 
+
+#FINRISK97
+older_fr1997 <- fr1997 %>% filter(SUKUP == "Women" & is.na(K129)) %>%  nrow()
+
+fr1997 <- fr1997 %>% 
+  mutate(K129 = ifelse(RELEASE_ID %in% older_fr1997, "no_period", as.character(K129))) 
+
+#HEALTH2000
+## how was menopause determined?
+
+
+
+
+
+
 ```
 
 
-Female donors with no menstruation response after imputation are removed: `r blood_data_summary %>% filter(sex == "Women" & is.na(QR79)) %>% nrow()` donors.
+Female study participants with no menstruation response after imputation are removed: (FinDonor: `r blood_data_summary %>% filter(sex == "Women" & is.na(QR79)) %>% nrow()` donors.)
 
 
 ```{r}
-nb_women_no_mesntruation_response <- blood_data_summary %>% filter(sex == "Women" & is.na(QR79)) %>% nrow()
+#FINDONOR
+findonor_nb_women_no_menstruation_response <- blood_data_summary %>% filter(sex == "Women" & is.na(QR79)) %>% nrow()
 
 
 # remove female donors with no menstruation response
@@ -141,7 +191,7 @@ blood_data_summary_final <- blood_data_summary %>%
   filter(mens_ok != "NA") 
 
 # We define the women's groups: 
-n_women_removed <- blood_data_summary_final %>% 
+findonor_n_women_removed <- blood_data_summary_final %>% 
   mutate(group = case_when(
     sex == "Men" ~ "Men", 
     sex == "Women" & (QR79 == "no_period" & age > 45) ~ "Post_menopause_women",
@@ -152,18 +202,45 @@ n_women_removed <- blood_data_summary_final %>%
   filter(group ==  "Women_pre_menop_no_mens") %>% 
   nrow()
 
+
+#FINRISK97
+finrisk_nb_women_no_menstruation_response <- fr1997 %>% filter(SUKUP == "Women" & is.na(K129)) %>% nrow()
+
+
+# remove female FinRisk97 participants with no menstruation response
+fr1997_summary_final <- fr1997 %>% 
+  mutate(mens_ok = case_when(
+    SUKUP == "Men" ~ "Men", 
+    SUKUP == "Women" & !is.na(K129)  ~ "Women",
+    TRUE ~ "NA")) %>% 
+  filter(mens_ok != "NA") 
+
+# We define the women's groups: 
+fr1997_n_women_removed <- fr1997_summary_final %>% 
+  mutate(group = case_when(
+    SUKUP == "Men" ~ "Men", 
+    SUKUP == "Women" & (K129 == "no_period" & IKA > 45) ~ "Post_menopause_women",
+    SUKUP == "Women" & (K129 == "no_period" & IKA <= 45) ~ "Women_pre_menop_no_mens",
+    SUKUP == "Women" & (K129 == "irregular_period" | K129 == "regular_period") ~ "Pre_menopause_women",
+    TRUE ~ "NA")) %>% 
+  group_by(group) %>% 
+  filter(group ==  "Women_pre_menop_no_mens") %>% 
+  nrow()
+
+
 ```
 
 We now define the following groups:
 
 + pre-menopausal: regular or irregular menstruation reported
-+ post-menopausal: no menstruation reported and age equal to superior to 45
++ post-menopausal: no menstruation reported and age equal to > 45
 + donors younger than 45 and no reported menstruation are excluded (`r n_women_removed` donors)
 
 
 
 ```{r}
-# We define the women's groups: 
+#FINDONOR:
+## We define the women's groups: 
 blood_data_summary_final <- blood_data_summary_final %>% 
   mutate(group = case_when(
     sex == "Men" ~ "Men", 
@@ -174,8 +251,86 @@ blood_data_summary_final <- blood_data_summary_final %>%
   filter(group != "Women_pre_menop_no_mens" & group != "NA") %>% 
   droplevels() %>% 
   mutate(group = ordered(group, levels =  c("Pre_menopause_women", "Post_menopause_women", "Men"))) 
+
+
+#FINRISK97:
+## We define the women's groups: 
+fr1997_summary_final <- fr1997_summary_final %>% 
+  mutate(group = case_when(
+    SUKUP == "Men" ~ "Men", 
+    SUKUP == "Women" & (K129 == "no_period" & IKA > 45) ~ "Post_menopause_women",
+    SUKUP == "Women" & (K129 == "no_period" & IKA <= 45) ~ "Women_pre_menop_no_mens",
+    SUKUP == "Women" & (K129 == "irregular_period" | K129 == "regular_period") ~ "Pre_menopause_women",
+    TRUE ~ "NA")) %>% 
+  filter(group != "Women_pre_menop_no_mens" & group != "NA") %>% 
+  droplevels() %>% 
+  mutate(group = ordered(group, levels =  c("Pre_menopause_women", "Post_menopause_women", "Men"))) 
+
 ```
 
+## Merging cohorts into one table 
+
+For the code to work all three cohorts need to be merged into one single table. Before this can be done variables the variables selected need to have the same name.  
+
+```{r}
+
+# We make new columns for donation data for the general population cohorts
+fr1997_summary_final$DaysToPreviousFB <- c("no donation")
+####same for h2000
+
+fr1997_summary_final$TwoYearsFromStartCount_FB <- c("no donation")
+####same for h2000
+
+# We then  assign a donation interval for 3-6 years for the general population cohorts
+fr1997_summary_final %>% mutate(DaysToPreviousFB = runif(nrow(fr1997_summary_final), min = 3*365, max = 6*365) )
+####same for h2000 
+
+# We rename the variables in the different data sets to maintain cohesion 
+
+## Participant ID 
+names(blood_data_summary_final)[names(blood_data_summary_final) == "donor"] <- "ID"
+names(fr1997_summary_final)[names(fr1997_summary_final) == "RELEASE_ID"] <- "ID"
+## Sex
+names(fr1997_summary_final)[names(fr1997_summary_final) == "SUKUP"] <- "sex"
+## Age
+names(fr1997_summary_final)[names(fr1997_summary_final) == "IKA"] <- "age"
+## Hemoglobin
+names(fr1997_summary_final)[names(fr1997_summary_final) == "HGB"] <- "Hb"
+## Ferritin
+names(fr1997_summary_final)[names(fr1997_summary_final) == "FERRITIN"] <- "ferritin"
+
+
+
+
+# We keep only the variables that are used in the analysis
+##FINDONOR
+blood_data_summary_final <- blood_data_summary_final %>% 
+  dplyr::select(donor,group, sex, age,TwoYearsFromStartCount_FB,DaysToPreviousFB, Hb_v,
+       Ferritin, CRP, TransferrinR, MCV, DaysToPreviousFB, QR40, iron_comp_c, BMI, QR83, iron_supp, QR54) %>% 
+  rename(red_meat = QR40,
+         pregnancy = QR83) %>% 
+    mutate(smoking = ifelse(QR54 == "no", "no", "yes"),
+         smoking = ordered(smoking, levels = c( "no",  "yes")),
+         pregnancy = ordered(pregnancy, levels = c( "no",  "yes"))) %>% 
+  dplyr::select(-QR54)
+
+##FINRISK97
+fr1997_summary_final <- fr1997_summary_final %>% 
+  dplyr::select(RELEASE_ID ,group, SUKUP, IKA,TwoYearsFromStartCount_FB,DaysToPreviousFB, Hb_v,
+       Ferritin, CRP, TransferrinR, MCV, DaysToPreviousFB, QR40, iron_comp_c, BMI, QR83, iron_supp, QR54) %>% 
+  rename(red_meat = QR40,
+         pregnancy = QR83) %>% 
+    mutate(smoking = ifelse(QR54 == "no", "no", "yes"),
+         smoking = ordered(smoking, levels = c( "no",  "yes")),
+         pregnancy = ordered(pregnancy, levels = c( "no",  "yes"))) %>% 
+  dplyr::select(-QR54)
+
+
+
+
+  
+
+```
 
 
 ## Remove donors with missing data
@@ -184,7 +339,7 @@ blood_data_summary_final <- blood_data_summary_final %>%
 
 We remove donors for which we do not have:
 
-* CRP or sTfR: `r blood_data_summary_final %>% filter(is.na(CRP) | is.na(TransferrinR)) %>% nrow()` donors
+* CRP or sTfR: `r blood_data_summary_final %>% filter(is.na(CRP) | is.na(TransferrinR)) %>% nrow()` donors - !!!!!! skip sTfR  part, we aren't using it. CRP? !!!!!
 
 ```{r}
 nb_NA_removed <- blood_data_summary_final %>%
@@ -613,37 +768,438 @@ ggpairs(test_data_std,
 
 
 # PART 3: LOGISTICAL REGRESSION
+
+
+
+
+
+
+<!-- ################ START OF FITTING FOR LOGISTICAL REGRESSION, SOME PARTS DUPLICATED IN LATER CODE!!!! -->
+
+
+<!-- # Summary -->
+
+<!-- This file includes the code for computing the regression results regarding the predictors of improving of self-related health during the FinDonor study for the explorative analysis parts. Models containing as many predictor variables as possible are fitted to data and confidence intervals for coefficients computed with bootstrapping. -->
+
+<!-- # Load the data -->
+
+<!-- We load the data from hypothesis based regressions and initial data analysis and combine them together.  -->
+
+<!-- ```{r loading} -->
+<!-- #Load questionnaire data recoded to change -->
+<!-- load(file = "../results/changedata.rdata")  -->
+
+
+<!-- #Load data used in hypothesis regressions -->
+<!-- load(file = "../results/hypregdata.rdata") -->
+
+
+<!-- #We cannot know if our "Reduced","Stable","Increased" factor levels are equally spaced. Hence make the variables unordered. -->
+<!-- #changedata %>% mutate_at(funs(ordered), l1) %>% mutate_each_(funs(as.numeric), l2) -->
+<!-- changedata <- changedata %>% mutate_if(is.ordered, function(x){factor(x,ordered = FALSE)}) -->
+<!-- regression_data_men <- inner_join(changedata,reg_data$men,by=c("donor"="donor")) -->
+<!-- regression_data_post_menop_women <- inner_join(changedata,reg_data$womenpost,by=c("donor"="donor")) -->
+<!-- regression_data_pre_menop_women <- inner_join(changedata,reg_data$womenpre,by=c("donor"="donor")) -->
+
+
+<!-- #Later in this script we find that smoking behaviour can not be fitted so they are dropped now not to loose data over them.  -->
+<!-- regression_data_men <- regression_data_men %>%  dplyr::select(-smoking_behavior,-health_outcome_neg) -->
+<!-- regression_data_post_menop_women <- regression_data_post_menop_women %>% dplyr::select(-smoking_behavior,-health_outcome_neg) -->
+<!-- regression_data_pre_menop_women <- regression_data_pre_menop_women %>%  dplyr::select(-smoking_behavior,-health_outcome_neg) -->
+<!-- #Bringing in extra data will bring some NAs. -->
+<!-- regression_data_men <-  droplevels(na.omit(regression_data_men)) -->
+<!-- regression_data_post_menop_women <- droplevels(na.omit(regression_data_post_menop_women))  -->
+<!-- regression_data_pre_menop_women <- droplevels(na.omit(regression_data_pre_menop_women)) -->
+
+<!-- #Sleep night needs to be scaled -->
+<!-- #Later in this script we find that sleep_night_d can not be fitted -->
+<!-- # regression_data_men <- regression_data_men %>% mutate(sleep_night_d = scale(sleep_night_d, scale = FALSE)[,1])  -->
+<!-- # regression_data_post_menop_women <- regression_data_post_menop_women %>% mutate(sleep_night_d = scale(sleep_night_d, scale = FALSE)[,1]) -->
+<!-- # regression_data_pre_menop_women <- regression_data_pre_menop_women %>% mutate(sleep_night_d = scale(sleep_night_d, scale = FALSE)[,1]) -->
+
+
+<!-- #Fuse back together for later use "Pre_menopause_women", "Post_menopause_women","Men" and join with unscaled data -->
+<!-- m<- regression_data_men %>% mutate(group = "Men") -->
+<!-- e<- regression_data_post_menop_women %>% mutate(group = "Post_menopause_women") -->
+<!-- o <- regression_data_pre_menop_women %>% mutate(group = "Pre_menopause_women") -->
+<!-- temp <- bind_rows(m,e,o) %>%  dplyr::select(-age,-BMI_diff,-donation_frequency,-Hb_beginning,-log_Ferritin_beginning,-starting_weight) -->
+<!-- file <- "../results/hypregdata_unscaled.rdata" -->
+<!-- load(file=file) -->
+<!-- regression_data <- regression_data %>% dplyr::select(age,BMI_diff,donation_frequency,Hb_beginning,log_Ferritin_beginning, Ferritin_beginning,starting_weight,donor) %>% inner_join(temp,by=c("donor"="donor")) #%>% select(-anemia_hist_d,-high_hb_hist_d,-education,-smoking_behavior) -->
+<!-- regression_data %>% group_by(group) %>% count() -->
+
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- regression_data %>% ungroup() %>% count() -->
+<!-- ``` -->
+
+<!-- # Table 1 type summary -->
+<!-- ```{r} -->
+<!-- #exclude variables that are not used in modelling -->
+<!-- table1data <- regression_data %>% ungroup() %>% dplyr::select(#-age, -->
+<!--   #-starting_weight, -->
+<!--   #-BMI_diff,  -->
+<!--   #-log_Ferritin_beginning, -->
+<!--   #-Hb_beginning, -->
+<!--   #-donation_frequency, -->
+<!--   -health_very_good, -->
+<!--   -health_excellent, -->
+<!--   -high_hb_hist_d, -->
+<!--   -health_outcome, -->
+<!--   -donor, -->
+<!--   #-high_hb_hist_d, -->
+<!--   #-sleep_night_d, -->
+<!--   #-vita_iron_d, -->
+<!--   #-ment_inf_d, -->
+<!--   #-education, -->
+<!--   #-smoking_behavior -->
+<!--   -health_poor, -->
+<!--   -health_satisfactory -->
+<!-- ) %>% mutate( -->
+<!--   starting_weight=starting_weight*5, -->
+<!--   log_Ferritin_beginning= exp((log(log_Ferritin_beginning)/log(2)) * log(2)), -->
+<!--   Hb_beginning = Hb_beginning *5 -->
+<!-- ) %>%  -->
+<!--   rename( -->
+<!--     Age = age, -->
+<!--     "Full time employed" = "employment", -->
+<!--     "Inital weight (kg)" =starting_weight, -->
+<!--     "BMI difference (second - first)"=BMI_diff, -->
+<!--     "Initial ferritin (ug/l)"=Ferritin_beginning, -->
+<!--     "Initial hemoglobin (g/l)" =Hb_beginning, -->
+<!--     "Donation frequency (yearly)"=donation_frequency, -->
+<!--     "Anemia detected"=anemia_hist_d, -->
+<!--     "Elevated cholesterol detected" =  "cholesterol_d", -->
+<!--     "Elevated blood sugar detected"="blood_sugar_d" ,  -->
+<!--     "High blood pressure detected"="HBP_d", -->
+<!--     "Low haemoglobin detected"="low_hb_hist_d", -->
+<!--     "FRCBS iron supplementation"="iron_supp_d",  -->
+<!--     "Frequency multivitamine"="vita_multi_d", -->
+<!--     "Frequency of anti-inflammatory"="anti_inf_d", -->
+<!--     "Frequency of red meat"="freq_red_meat_d", -->
+<!--     "Frequency of fruits"="freq_fruits_d", -->
+<!--     "Frequency of juices"="freq_juices_d", -->
+<!--     "Frequency of whole milk"="freq_wholem_d", -->
+<!--     "Frequency of milk"="freq_milk_d", -->
+<!--     "Frequency of coffee"="freq_cof_d", -->
+<!--     "Frequency of tea"="freq_tea_d", -->
+<!--     "Frequency of alcohol"="freq_alc_d", -->
+<!--     "Physical symptoms inferred"="phys_inf_d", -->
+<!--     "Physical condition" = "phys_cond_d", -->
+<!--     "Ability for heavy activity" = "act_heavy_d", -->
+<!--     "Typical day activity" = "day_act_d", -->
+<!--     "Hours for light activity" = "h_act_light_d", -->
+<!--     "Enough sleep" = "sleep_enough_d", -->
+<!--     "Tired during day" = "sleep_tired_d", -->
+<!--     "Frequency of feeling calm" = "freq_calm_d", -->
+<!--     "Quality of life" = "life_qual" -->
+<!--   ) -->
+
+<!-- myVars<- colnames(table1data %>% dplyr::select(-group)) -->
+<!-- non_normal_vars <- c("Initial ferritin (ug/l)") -->
+<!-- summary_table <- CreateTableOne(data = table1data,vars=myVars, strata = "group",test = FALSE) -->
+
+<!-- tab3Mat <- print(summary_table, nonnormal = non_normal_vars,vars=myVars, quote = FALSE, noSpaces = TRUE, printToggle = FALSE) -->
+
+<!-- tab3Mat %>%  -->
+<!--   kable() -->
+<!--   write.csv(tab3Mat, file = paste0("../results/table_1_populationExp_",gsub("-","",as.Date(Sys.time())),".csv")) -->
+
+<!-- #Does not work    -->
+<!-- #openxlsx::write.xlsx(tab3Mat, file = "../results/table_1_populationExp_20200512.xlsx",rowNames =TRUE,borders="surrounding",keepNA=TRUE) -->
+<!-- ``` -->
+
+<!-- ## Percentage of iron depleted -->
+
+<!-- ```{r} -->
+<!-- regression_data %>%  dplyr::select(group, Ferritin_beginning) %>% mutate(Iron_depleted = Ferritin_beginning < 15) %>%  group_by(group,Iron_depleted) %>% count() %>% group_by(group)%>% summarise( -->
+<!--   Iron_depleted = Iron_depleted, -->
+<!--   n= n, -->
+<!--   Percentage = round(n / sum(n),2) -->
+<!-- ) -->
+<!-- ``` -->
+
+
+<!-- # Premenopausal women -->
+
+<!-- Check that final data has some variation -->
+<!-- ```{r} -->
+<!-- summary(regression_data_pre_menop_women) -->
+<!-- ``` -->
+
+<!-- All explenatory variables selected in inital_data_analysis.Rmd were tried,  but could not be used because of problems in model fitting. These were then left out and also removed from the data assembly process in the inital_data_analysis.Rmd not to loose data because of these unusable variables. The variables left out are specified in code below for each group. -->
+
+<!-- ```{r} -->
+<!-- logit_pre_menop_women <- glm(health_outcome ~ age + starting_weight + BMI_diff +  -->
+<!--                                log_Ferritin_beginning + Hb_beginning + -->
+<!--                               donation_frequency + health_very_good + health_excellent + -->
+<!--                               cholesterol_d +  -->
+<!--                               blood_sugar_d +  -->
+<!--                                HBP_d +  -->
+<!--                                 low_hb_hist_d +  -->
+<!--                                anemia_hist_d +  -->
+<!-- #                               high_hb_hist_d + # The following terms are causing separation among the sample points: high_hb_hist_dTRUE -->
+<!--                                iron_supp_d +  -->
+<!--                                #sleep_night_d + # #fails in bootstrapping -->
+<!--                                freq_calm_d +  -->
+<!--                                freq_red_meat_d +  -->
+<!--                                freq_fruits_d +  -->
+<!--                                freq_juices_d +  -->
+<!--                                freq_wholem_d +  -->
+<!--                                freq_milk_d +  -->
+<!--                                freq_cof_d +  -->
+<!--                                freq_tea_d +  -->
+<!--                                phys_cond_d +  -->
+<!--                                act_heavy_d +  -->
+<!--                                sleep_enough_d +  -->
+<!--                                day_act_d +  -->
+<!--                                h_act_light_d +  -->
+<!--                                vita_multi_d +  -->
+<!--                                #vita_iron_d +  #fails in bootstrapping -->
+<!--                                sleep_tired_d +  -->
+<!--                                anti_inf_d +  -->
+<!--                                phys_inf_d +  -->
+<!--                                #ment_inf_d +  #fails in bootstrapping -->
+<!--                                freq_alc_d + -->
+<!--                                life_qual + -->
+<!--                                #education  +  #fails in bootstrapping -->
+<!--                                employment   -->
+<!--                              #smoking_behavior  #fails in bootstrapping -->
+<!--                              , -->
+<!--                              data=regression_data_pre_menop_women, -->
+<!--                             family="binomial", separation = 'test') -->
+
+<!--  summary(logit_pre_menop_women) -->
+<!-- ``` -->
+
+<!-- cholesterol_d + blood_sugar_d + HBP_d + low_hb_hist_d + anemia_hist_d + high_hb_hist_d + iron_supp_d + sleep_night_d + freq_calm_d + freq_red_meat_d + freq_fruits_d + freq_juices_d + freq_wholem_d + freq_milk_d + freq_cof_d + freq_tea_d + phys_cond_d + act_heavy_d + sleep_enough_d + day_act_d + h_act_light_d + vita_multi_d + vita_iron_d + sleep_tired_d + anti_inf_d + phys_inf_d + ment_inf_d + freq_alc_d  -->
+
+<!-- ```{r} -->
+<!-- plot(logit_pre_menop_women) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- vif(logit_pre_menop_women) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- logistic.display(logit_pre_menop_women) -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- tidy_logit_pre_menop_women <- -->
+<!--   logit_pre_menop_women %>%  -->
+<!--   tidy %>%  -->
+<!--   mutate(OR = exp(estimate), -->
+<!--          group = "Pre_menopause_women") %>% mutate(p.value = p.value * 2) -->
+<!-- #p-values are multiplied as we analyse the data twice -->
+<!-- ``` -->
+
+
+<!-- # Post menopausal women -->
+
+<!-- ```{r} -->
+<!-- summary(regression_data_post_menop_women) -->
+<!-- ``` -->
+
+<!-- There are no cases who aquired high Hb during the research period. high_hb_hist_d should be removed. -->
+
+<!-- ```{r} -->
+<!-- logit_post_menop_women <- glm(health_outcome ~ age + starting_weight + BMI_diff +  -->
+<!--                                log_Ferritin_beginning + Hb_beginning + -->
+<!--                               donation_frequency + health_very_good + health_excellent + -->
+<!--                                cholesterol_d +  -->
+<!--                               # blood_sugar_d + # Separation exists among the sample points. -->
+<!--                                HBP_d +  -->
+<!--                                low_hb_hist_d +  -->
+<!--                               anemia_hist_d +  -->
+<!--                                # high_hb_hist_d + # no postive cases  -->
+<!--                                iron_supp_d +  -->
+<!--                                #sleep_night_d + #fails in bootstrapping -->
+<!--                                freq_calm_d +  -->
+<!--                                freq_red_meat_d +  -->
+<!--                                freq_fruits_d +  -->
+<!--                                freq_juices_d +  -->
+<!--                                freq_wholem_d +  -->
+<!--                                freq_milk_d +  -->
+<!--                                freq_cof_d +  -->
+<!--                                freq_tea_d +  -->
+<!--                                phys_cond_d +  -->
+<!--                                act_heavy_d +  -->
+<!--                                sleep_enough_d +  -->
+<!--                                day_act_d +  -->
+<!--                                h_act_light_d +  -->
+<!--                                vita_multi_d +  -->
+<!--                                #vita_iron_d + #eparation exists among the sample points. -->
+<!--                                sleep_tired_d +  -->
+<!--                                anti_inf_d +  -->
+<!--                                phys_inf_d +  -->
+<!--                                #ment_inf_d + #fails in bootstrapping -->
+<!--                                freq_alc_d + -->
+<!--                                life_qual + -->
+<!--                                #education + #fails in bootstrapping -->
+<!--                                employment  -->
+<!--                                #smoking_behavior #fails in bootstrapping -->
+<!--                              , -->
+<!--                              data=regression_data_post_menop_women, -->
+<!--                             family="binomial", separation = 'test') -->
+
+<!--  summary(logit_post_menop_women) -->
+<!-- ``` -->
+
+<!-- cholesterol_d + blood_sugar_d + HBP_d + low_hb_hist_d + anemia_hist_d + high_hb_hist_d + iron_supp_d + sleep_night_d + freq_calm_d + freq_red_meat_d + freq_fruits_d + freq_juices_d + freq_wholem_d + freq_milk_d + freq_cof_d + freq_tea_d + phys_cond_d + act_heavy_d + sleep_enough_d + day_act_d + h_act_light_d + vita_multi_d + vita_iron_d + sleep_tired_d + anti_inf_d + phys_inf_d + ment_inf_d + freq_alc_d  -->
+
+<!-- ```{r} -->
+<!-- plot(logit_post_menop_women) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- vif(logit_post_menop_women) -->
+<!-- ``` -->
+<!-- High VIF values indicate that for post menopausal women the analysis is not reliable as there is much colinearity. -->
+
+<!-- ```{r} -->
+<!-- logistic.display(logit_post_menop_women) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- tidy_logit_post_menop_women <- -->
+<!--   logit_post_menop_women %>%  -->
+<!--   tidy %>%  -->
+<!--   mutate(OR = exp(estimate), -->
+<!--          group = "Post_menopause_women") %>% mutate(p.value = p.value * 2) -->
+<!-- #p-values are multiplied as we analyse the data twice``` -->
+
+
+
+<!-- # Men -->
+
+<!-- ```{r} -->
+<!-- summary(regression_data_men) -->
+<!-- ``` -->
+
+<!-- There are only 2 cases who aquired high Hb during the research period and it was not used in models with women. high_hb_hist_d should be removed. -->
+
+<!-- ```{r} -->
+<!-- logit_men <- glm(health_outcome ~ age + starting_weight + BMI_diff +  -->
+<!--                                log_Ferritin_beginning + Hb_beginning + -->
+<!--                               donation_frequency + health_very_good + health_excellent + -->
+<!--                              cholesterol_d +  -->
+<!--                                blood_sugar_d +  -->
+<!--                                HBP_d +  -->
+<!--                                low_hb_hist_d +  -->
+<!--                               # anemia_hist_d + # eparation exists among the sample points. -->
+<!--                               # high_hb_hist_d +  -->
+<!--                                iron_supp_d +  -->
+<!--                               # sleep_night_d + #fails in bootstrapping -->
+<!--                                freq_calm_d +  -->
+<!--                                freq_red_meat_d +  -->
+<!--                                freq_fruits_d +  -->
+<!--                                freq_juices_d +  -->
+<!--                                freq_wholem_d +  -->
+<!--                                freq_milk_d +  -->
+<!--                                freq_cof_d +  -->
+<!--                                freq_tea_d +  -->
+<!--                                phys_cond_d +  -->
+<!--                                act_heavy_d +  -->
+<!--                                sleep_enough_d +  -->
+<!--                                day_act_d +  -->
+<!--                                h_act_light_d +  -->
+<!--                                vita_multi_d +  -->
+<!--                                #vita_iron_d +  -->
+<!--                                sleep_tired_d +  -->
+<!--                                anti_inf_d +  -->
+<!--                                phys_inf_d +  -->
+<!--                                #ment_inf_d + #fails in bootstrapping  -->
+<!--                                freq_alc_d + -->
+<!--                                life_qual + -->
+<!--                               # education + #fails in bootstrapping  -->
+<!--                                employment  -->
+<!--                               # smoking_behavior #fails in bootstrapping -->
+<!--                              , -->
+<!--                              data=regression_data_men, -->
+<!--                           #    data=test_data_std, -->
+<!--                             family="binomial", separation = 'test') -->
+
+<!--  summary(logit_men) -->
+
+
+<!-- ``` -->
+
+<!-- cholesterol_d + blood_sugar_d + HBP_d + low_hb_hist_d + anemia_hist_d + high_hb_hist_d + iron_supp_d + sleep_night_d + freq_calm_d + freq_red_meat_d + freq_fruits_d + freq_juices_d + freq_wholem_d + freq_milk_d + freq_cof_d + freq_tea_d + phys_cond_d + act_heavy_d + sleep_enough_d + day_act_d + h_act_light_d + vita_multi_d + vita_iron_d + sleep_tired_d + anti_inf_d + phys_inf_d + ment_inf_d + freq_alc_d  -->
+
+<!-- ```{r} -->
+<!-- plot(logit_men) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- vif(logit_men) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- logistic.display(logit_men) -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- tidy_logit_men <- -->
+<!--   logit_men %>%  -->
+<!--   tidy %>%  -->
+<!--   mutate(OR = exp(estimate), -->
+<!--          group = "Men") %>% mutate(p.value = p.value * 2) -->
+<!-- #p-values are multiplied as we analyse the data twice -->
+<!-- ``` -->
+
+
+
+################ END OF FITTING FOR LOGISTICAL REGRESSION
+
+
+
+
+
+
+################ THIS PART WE WILL USE, START
   
-```{r setup, include=FALSE}
-Sys.setlocale("LC_MESSAGES", 'en_GB.UTF-8')
-Sys.setenv(LANG = "en_US.UTF-8")
-# echo "rmarkdown::render('explorative_analysis.Rmd', clean=TRUE,output_format='html_document',output_file='../results/explorative_analysis.html')" | R --slave
-knitr::opts_chunk$set(
-	echo = TRUE,
-	message = FALSE,
-	warning = FALSE
-)
-library(epiDisplay)
-library(tidyverse)
-library(safeBinaryRegression)
-library(epitools)
-library(ez)
-library(lubridate)
-library(ggbeeswarm)
-library(tidymodels)
-library(broom)
-library(GGally)
-library(ggfortify)
-library(car)
-library(boot)
-library(tableone)
-library(kableExtra)
+```{r}
+test_data_std <- test_data_std %>% 
+  mutate(irondef = #ferritin variable name < 15
+           ) #makes a variable of ID
+logit_pre_menopausal <- glm(
+  irondef ~ BMI +
+    age,
+    data=test_data_std,
+    family="binomial", separation = 'test')
+ 
+ summary(logit_pre_menopausal)
+
 
 #https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression
 #https://stats.stackexchange.com/questions/45803/logistic-regression-in-r-resulted-in-perfect-separation-hauck-donner-phenomenon
 ```
   
+
+```{r}
+plot(logit_pre_menopausal)
+```
+
+```{r}
+vif(logit_pre_menopausal)
+```
+
+```{r}
+logistic.display(logit_pre_menopausal)
+```
   
+############### END OF PART WE WILL USE 
+
+
+
+
+
+
   
 # Bootstraps
 https://data.princeton.edu/wws509/r/c3s1
