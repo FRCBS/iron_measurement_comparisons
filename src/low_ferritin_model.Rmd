@@ -92,12 +92,8 @@ blood_data_summary <- indiv_donations_data %>%
   group_by(donor) %>% 
   summarise(sex=first(gender)) 
 
-## Get values for first study donation with the required measurements 
-## donation (regardless of donation type)
-## We remove events with no Ferritin and hb_v to be inline with from when 
-## the nb of previous donations were counted.
-
-
+## Get values for first study donation with the required measurements donation (regardless of donation type)
+## We remove events with no Ferritin and hb_v to be inline with from when the nb of previous donations were counted.
 blood_values_init <- indiv_donations_data %>% 
   filter(!is.na(Ferritin) & !is.na(Hb_v) ) %>% 
   group_by(donor) %>% 
@@ -114,29 +110,29 @@ blood_data_summary <- donor_demo %>%
   inner_join(blood_data_summary, by = "donor") %>%
   mutate(all_study_FB_donation_count = NonFinnDonorDonationCount_FB + YesFinnDonorDonationCount_FB) 
 
-#FINRISK97
+#FINRISK97 
 ## Assign all FinRisk97 paprticipants to FINRISK97 cohort
 fr1997$cohort <- c("FINRISK97")
 
 ## Change term for sex from binary 1,2 to men, women
 fr1997$SUKUP <- gsub("1", "Men", fr1997$SUKUP)
-fr1997$SUKUP <- gsub("2", "Women", fr1997$SUKUP)  
+fr1997$SUKUP <- gsub("2", "Women", fr1997$SUKUP)
 
 ## Get sex for each participant
-fr1997_summary <- fr1997 %>% 
-  group_by(RELEASE_ID) %>% 
-  summarise(sex=first(SUKUP)) 
+fr1997_summary <- fr1997 %>%
+  filter(!is.na(FERRITIN)) %>%
+  group_by(RELEASE_ID) %>%
+  summarise(sex=first(SUKUP))
 
-## remove n/a:s for ferritin and Hb
-fr1997_remove_na <- fr1997 %>% 
-  filter(!is.na(FERRITIN)) %>% 
-  group_by(RELEASE_ID) %>% 
-  dplyr::select(IKA, FERRITIN, CRP, RELEASE_ID, cohort) %>% 
+## remove n/a:s for ferritin (NOT FOR HB!!!! We only have data from about 400 participants, all male)
+fr1997_remove_na <- fr1997 %>%
+  filter(!is.na(FERRITIN)) %>%
+  group_by(RELEASE_ID) %>%
+  dplyr::select(IKA, FERRITIN, CRP, RELEASE_ID, cohort) %>%
   ungroup()
 
-fr1997_summary <- fr1997_summary %>% 
-  full_join(fr1997_remove_na, by = "RELEASE_ID") 
-
+fr1997_summary <- fr1997_summary %>%
+  full_join(fr1997_remove_na, by = "RELEASE_ID")
 
 #HEALTH2000
 ## Assign all Health2000 participants to HEALTH2000 cohort
@@ -147,6 +143,21 @@ h2000$cohort <- c("HEALTH00")
 h2000$SP2 <- gsub("1", "Men", h2000$SP2)
 h2000$SP2 <- gsub("2", "Women", h2000$SP2)  
 
+## Get sex for each participant
+h2000_summary <- h2000 %>%
+  filter(!is.na(FERRITIINI)) %>%
+  group_by(RELEASE_ID) %>%
+  summarise(sex=first(SP2))
+
+## remove n/a:s for ferritin and Hb
+  h2000_remove_na <- h2000 %>%
+    filter(!is.na(FERRITIINI) & !is.na(B_Hb)) %>%
+    group_by(RELEASE_ID) %>%
+    dplyr::select(IKA2, FERRITIINI, CRP, RELEASE_ID, cohort) %>%
+    ungroup()
+  
+  h2000_summary <- h2000_summary %>%
+    full_join(h2000_remove_na, by = "RELEASE_ID")
 
 ```
 
@@ -162,7 +173,7 @@ There are `r fr1997 %>% filter(SUKUP == "Women" & is.na(K129)) %>%  nrow()` wome
 
 
 HEALTH2000:
-
+BA3 = periods (1=reg, 2=irreg, 3=no)
 
 
 ```{r}
@@ -174,13 +185,16 @@ blood_data_summary <- blood_data_summary %>%
   mutate(QR79 = ifelse(donor %in% older_findonor_donors, "no_period", as.character(QR79))) 
 
 #FINRISK97
-older_fr1997 <- fr1997 %>% filter(SUKUP == "Women" & is.na(K129)) %>%  nrow()
+older_fr1997 <- fr1997_summary %>% filter(sex == "Women" & is.na(K129)) %>%  nrow()
 
-fr1997 <- fr1997 %>% 
-  mutate(K129 = ifelse(RELEASE_ID %in% older_fr1997, "no_period", as.character(K129))) 
+fr1997_summary <- fr1997_summary %>% 
+  mutate(K129 = ifelse(RELEASE_ID %in% older_fr1997, "3", as.character(K129))) 
 
 #HEALTH2000
-## how was menopause determined?
+older_h2000 <- h2000_summary %>% filter(sex == "Women" & is.na(BA3)) %>%  nrow()
+
+h2000_summary <- h2000_summary %>% 
+  mutate(BA3 = ifelse(RELEASE_ID %in% older_h2000, "3", as.character(BA3))) 
 
 
 
@@ -231,17 +245,17 @@ fr1997_summary_final <- fr1997 %>%
     TRUE ~ "NA")) %>% 
   filter(mens_ok != "NA") 
 
-# We define the women's groups: 
-fr1997_n_women_removed <- fr1997_summary_final %>% 
-  mutate(group = case_when(
-    SUKUP == "Men" ~ "Men", 
-    SUKUP == "Women" & (K129 == "no_period" & IKA > 45) ~ "Post_menopause_women",
-    SUKUP == "Women" & (K129 == "no_period" & IKA <= 45) ~ "Women_pre_menop_no_mens",
-    SUKUP == "Women" & (K129 == "irregular_period" | K129 == "regular_period") ~ "Pre_menopause_women",
-    TRUE ~ "NA")) %>% 
-  group_by(group) %>% 
-  filter(group ==  "Women_pre_menop_no_mens") %>% 
-  nrow()
+# # We define the women's groups: 
+# fr1997_n_women_removed <- fr1997_summary_final %>% 
+#   mutate(group = case_when(
+#     SUKUP == "Men" ~ "Men", 
+#     SUKUP == "Women" & (K129 == "no_period" & IKA > 45) ~ "Post_menopause_women",
+#     SUKUP == "Women" & (K129 == "no_period" & IKA <= 45) ~ "Women_pre_menop_no_mens",
+#     SUKUP == "Women" & (K129 == "irregular_period" | K129 == "regular_period") ~ "Pre_menopause_women",
+#     TRUE ~ "NA")) %>% 
+#   group_by(group) %>% 
+#   filter(group ==  "Women_pre_menop_no_mens") %>% 
+#   nrow()
 
 
 ```
@@ -292,14 +306,11 @@ For the code to work all three cohorts need to be merged into one single table. 
 ```{r}
 
 # We make new columns for donation data for the general population cohorts
-fr1997_summary_final$DaysToPreviousFB <- c("no donation")
-####same for h2000
-
-fr1997_summary_final$TwoYearsFromStartCount_FB <- c("no donation")
+fr1997_summary_final$TwoYearsFromStartCount_FB <- 0
 ####same for h2000
 
 # We then  assign a donation interval for 3-6 years for the general population cohorts
-fr1997_summary_final %>% mutate(DaysToPreviousFB = runif(nrow(fr1997_summary_final), min = 3*365, max = 6*365) )
+fr1997_summary_final <- fr1997_summary_final %>% mutate(DaysToPreviousFB = round(runif(nrow(fr1997_summary_final), min = 3*365, max = 6*365) ,0))
 ####same for h2000 
 
 # We rename the variables in the different data sets to maintain cohesion 
