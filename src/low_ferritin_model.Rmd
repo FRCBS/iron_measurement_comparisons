@@ -122,6 +122,22 @@ fr1997$cohort <- c("FINRISK97")
 fr1997$SUKUP <- gsub("1", "Men", fr1997$SUKUP)
 fr1997$SUKUP <- gsub("2", "Women", fr1997$SUKUP)  
 
+## Get sex for each participant
+fr1997_summary <- fr1997 %>% 
+  group_by(RELEASE_ID) %>% 
+  summarise(sex=first(SUKUP)) 
+
+## remove n/a:s for ferritin and Hb
+fr1997_remove_na <- fr1997 %>% 
+  filter(!is.na(FERRITIN)) %>% 
+  group_by(RELEASE_ID) %>% 
+  dplyr::select(IKA, FERRITIN, CRP, RELEASE_ID, cohort) %>% 
+  ungroup()
+
+fr1997_summary <- fr1997_summary %>% 
+  full_join(fr1997_remove_na, by = "RELEASE_ID") 
+
+
 #HEALTH2000
 ## Assign all Health2000 participants to HEALTH2000 cohort
 
@@ -258,9 +274,10 @@ blood_data_summary_final <- blood_data_summary_final %>%
 fr1997_summary_final <- fr1997_summary_final %>% 
   mutate(group = case_when(
     SUKUP == "Men" ~ "Men", 
-    SUKUP == "Women" & (K129 == "no_period" & IKA > 45) ~ "Post_menopause_women",
-    SUKUP == "Women" & (K129 == "no_period" & IKA <= 45) ~ "Women_pre_menop_no_mens",
-    SUKUP == "Women" & (K129 == "irregular_period" | K129 == "regular_period") ~ "Pre_menopause_women",
+    SUKUP == "Women" & (K129 == "3" & IKA > 45) ~ "Post_menopause_women",
+    SUKUP == "Women" & (K129 == "3" & IKA <= 45) ~ "Women_pre_menop_no_mens",
+    SUKUP == "Women" & (K129 == "1" | K129 == "regular_period") ~ "Pre_menopause_women_regular",
+    SUKUP == "Women" & (K129 == "2" | K129 == "irregular_period") ~ "Pre_menopause_women_irregular",
     TRUE ~ "NA")) %>% 
   filter(group != "Women_pre_menop_no_mens" & group != "NA") %>% 
   droplevels() %>% 
@@ -297,7 +314,7 @@ names(fr1997_summary_final)[names(fr1997_summary_final) == "IKA"] <- "age"
 ## Hemoglobin
 names(fr1997_summary_final)[names(fr1997_summary_final) == "HGB"] <- "Hb"
 ## Ferritin
-names(fr1997_summary_final)[names(fr1997_summary_final) == "FERRITIN"] <- "ferritin"
+names(fr1997_summary_final)[names(fr1997_summary_final) == "FERRITIN"] <- "Ferritin"
 
 
 
@@ -305,26 +322,28 @@ names(fr1997_summary_final)[names(fr1997_summary_final) == "FERRITIN"] <- "ferri
 # We keep only the variables that are used in the analysis
 ##FINDONOR
 blood_data_summary_final <- blood_data_summary_final %>% 
-  dplyr::select(donor,group, sex, age,TwoYearsFromStartCount_FB,DaysToPreviousFB, Hb_v,
-       Ferritin, CRP, TransferrinR, MCV, DaysToPreviousFB, QR40, iron_comp_c, BMI, QR83, iron_supp, QR54) %>% 
-  rename(red_meat = QR40,
-         pregnancy = QR83) %>% 
-    mutate(smoking = ifelse(QR54 == "no", "no", "yes"),
-         smoking = ordered(smoking, levels = c( "no",  "yes")),
-         pregnancy = ordered(pregnancy, levels = c( "no",  "yes"))) %>% 
-  dplyr::select(-QR54)
+  dplyr::select(ID, group, sex, age, TwoYearsFromStartCount_FB, DaysToPreviousFB,
+       Ferritin, DaysToPreviousFB, BMI) 
+
+###removed most factors and all renaming/mutating just to try out this feature, original script for reference:
+# blood_data_summary_final <- blood_data_summary_final %>% 
+#   dplyr::select(ID, group, sex, age, TwoYearsFromStartCount_FB, DaysToPreviousFB, Hb_v,
+#        Ferritin, CRP, DaysToPreviousFB, QR40, iron_comp_c, BMI, QR83, iron_supp, QR54) %>% 
+#   rename(red_meat = QR40,
+#          pregnancy = QR83) %>% 
+#     mutate(smoking = ifelse(QR54 == "no", "no", "yes"),
+#          smoking = ordered(smoking, levels = c( "no",  "yes")),
+#          pregnancy = ordered(pregnancy, levels = c( "no",  "yes"))) %>% 
+#   dplyr::select(-QR54)
 
 ##FINRISK97
 fr1997_summary_final <- fr1997_summary_final %>% 
-  dplyr::select(RELEASE_ID ,group, SUKUP, IKA,TwoYearsFromStartCount_FB,DaysToPreviousFB, Hb_v,
-       Ferritin, CRP, TransferrinR, MCV, DaysToPreviousFB, QR40, iron_comp_c, BMI, QR83, iron_supp, QR54) %>% 
-  rename(red_meat = QR40,
-         pregnancy = QR83) %>% 
-    mutate(smoking = ifelse(QR54 == "no", "no", "yes"),
-         smoking = ordered(smoking, levels = c( "no",  "yes")),
-         pregnancy = ordered(pregnancy, levels = c( "no",  "yes"))) %>% 
-  dplyr::select(-QR54)
+  dplyr::select(ID ,group, sex, age, TwoYearsFromStartCount_FB, DaysToPreviousFB,
+       Ferritin, DaysToPreviousFB, BMI)
 
+# merge the cohorts
+
+summary_all_cohorts <- rbind(blood_data_summary_final, fr1997_summary_final)
 
 
 
