@@ -400,7 +400,9 @@ h2000_summary_final$GivenIronSupplements <- NA
 h2000_summary_final$TookIronSupplements <- NA
 h2000_summary_final$RedMeat <- NA
 
-# Select only the variables that are used in the analysis
+# Select only the variables that are used in the analysis. 
+# Assign smoking to "yes" if the study participant reported daily smoking and "no" if they reported no smoking or smoking sometimes +
+# change the order of levels for smoking and pregnancy (no<yes)
 
 ### NOTE: DATA ON IRON SUPPLEMENTS ARE STILL MISSING DUE TO DIFFERENCE IN CODING IN THE EXCEL FILE, ADDED COLUMN WITH N/A DATA JUST TO TRY THIS OUT, REMOVE AND FIX CODE WHEN I'VE FIGURED OUT WHAT THE CORRECT CODE IS
 blood_data_summary_final$TookIronSupplements <- NA
@@ -409,28 +411,39 @@ blood_data_summary_final$GivenIronSupplements <- NA
 blood_data_summary_final <- blood_data_summary_final %>% 
   dplyr::select(ID, Group, Sex, Age, TwoYearsFromStartCount_FB, DaysToPreviousFB,
                 Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat, GivenIronSupplements, TookIronSupplements, PreviousChildbirth, 
-                CurrentPregnancy, Cohort) 
+                CurrentPregnancy, Cohort) %>% 
+    mutate(Smoking = ifelse(Smoking == "no", "no", "yes"),
+         Smoking = ordered(Smoking, levels = c( "no",  "yes")))
+
 fr1997_summary_final <- fr1997_summary_final %>% 
   dplyr::select(ID, Group, Sex, Age, TwoYearsFromStartCount_FB, DaysToPreviousFB,
                 Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat, GivenIronSupplements, TookIronSupplements, PreviousChildbirth, 
                 CurrentPregnancy, Cohort)
+             mutate(Smoking = ifelse(Smoking == "no", "no", "yes"),
+        Smoking = ordered(Smoking, levels = c( "no",  "yes")),
+         CurrentPregnancy = ordered(CurrentPregnancy, levels = c( "no",  "yes")))
+
+
 h2000_summary_final <- h2000_summary_final %>% 
   dplyr::select(ID, Group, Sex, Age, TwoYearsFromStartCount_FB, DaysToPreviousFB,
                 Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat, GivenIronSupplements, TookIronSupplements, PreviousChildbirth, 
                 CurrentPregnancy, Cohort)
+         mutate(Smoking = ifelse(Smoking == "no", "no", "yes"),
+         Smoking = ordered(Smoking, levels = c( "no",  "yes")),
+         CurrentPregnancy = ordered(CurrentPregnancy, levels = c( "no",  "yes")))
 
 
 
-###removed most factors and all renaming/mutating just to try out this feature, original script for reference:
-# blood_data_summary_final <- blood_data_summary_final %>% 
-#   dplyr::select(ID, group, sex, age, TwoYearsFromStartCount_FB, DaysToPreviousFB, Hb_v,
-#        Ferritin, CRP, DaysToPreviousFB, QR40, iron_comp_c, BMI, QR83, iron_supp, QR54) %>% 
-#   rename(red_meat = QR40,
-#          pregnancy = QR83) %>% 
-#     mutate(smoking = ifelse(QR54 == "no", "no", "yes"),
-#          smoking = ordered(smoking, levels = c( "no",  "yes")),
-#          pregnancy = ordered(pregnancy, levels = c( "no",  "yes"))) %>% 
-#   dplyr::select(-QR54)# Rename variables to maintain cohesion between the cohorts
+##removed most factors and all renaming/mutating just to try out this feature, original script for reference:
+blood_data_summary_final <- blood_data_summary_final %>%
+  dplyr::select(ID, group, sex, age, TwoYearsFromStartCount_FB, DaysToPreviousFB, Hb_v,
+       Ferritin, CRP, DaysToPreviousFB, QR40, iron_comp_c, BMI, QR83, iron_supp, QR54) %>%
+  rename(red_meat = QR40,
+         pregnancy = QR83) %>%
+    mutate(smoking = ifelse(QR54 == "no", "no", "yes"),
+         smoking = ordered(smoking, levels = c( "no",  "yes")),
+         pregnancy = ordered(pregnancy, levels = c( "no",  "yes"))) %>%
+  dplyr::select(-QR54)# Rename variables to maintain cohesion between the cohorts
 ## Participant ID 
 # names(blood_data_summary)[names(blood_data_summary) == "donor"] <- "ID"
 # names(fr1997_summary)[names(fr1997_summary) == "RELEASE_ID"] <- "ID"
