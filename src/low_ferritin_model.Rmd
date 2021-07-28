@@ -745,7 +745,7 @@ We use a linear scale from 1 to 4 for red meat consumption and mapped the 6 poss
 * QR83: have you given birth ?
 
 ```{r}
-# Recode food and non-alcoholic beverages
+# Recode food and non-alcoholic beverages THIS PART NEEDS TO BE RECODED?
 meat <- summary_all_cohorts %>% 
   dplyr::select(ID, RedMeat) %>% 
   gather(key = key, value =  value, -ID) %>% 
