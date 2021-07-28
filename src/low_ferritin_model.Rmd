@@ -492,6 +492,8 @@ h2000_summary_final <- h2000_summary_final %>%
 
 We remove `r cohort_name %>% filter((group != "Men" & is.na(QR83)))%>% nrow()` female donors who did not answer the question about childbirth: 
 
+Women who answer no to the of previous childbirth = nulliparous women
+
 ```{r}
 #### FinDonor
 nb_removed_blood <- nb_removed_blood +
@@ -518,7 +520,7 @@ h2000_summary_final <- h2000_summary_final %>%
 
 ### Current pregnancy
 
-We remove `r cohort_name %>% filter((group != "Men" & is.na(QR83)))%>% nrow()` female donors who did not answer the pregnancy question: 
+Pregnant women are not allowed to donate blood in NL and FIN, and one of the exclusion criteria for the NL PREVEND cohort was current pregnancy. Therefore women who are currently pregnant will need to be removed from the FIN general population cohorts. We will now remove `r cohort_name %>% filter((group != "Men" & is.na(QR83)))%>% nrow()` females who did not answer the pregnancy question: 
 
 ```{r}
 #### FinDonor
@@ -600,9 +602,25 @@ The total number of donors removed because of missing questionnaire data is:
 `r nb_removed_h2000`
 
 
+## Remove cohort participants who are currently pregnant
 
+As current pregnancy was an exclusion criteria for the NL general population cohort and pregnant women are not allowed to donate blood, we will remove women who are currently pregnant from the FIN general population cohorts. 
 
+FinRisk97: 1=no, 2=yes
+Health2000: 0=no, 1=yes
 
+CHECK THAT THIS ACTUALLY ONLY REMOVES PREGNANT WOMEN!!!!!!
+
+```{r}
+# FinRisk97
+fr1997_summary_final <- fr1997_summary_final %>% 
+   filter(!(Group != "Men" & CurrentPregnancy == 2))
+
+#Health2000
+h2000_summary_final <- h2000_summary_final %>% 
+   filter(!(Group != "Men" & CurrentPregnancy == 1))
+
+```
 
 ## Remove donors with extreme physiological measures
 
@@ -660,6 +678,83 @@ h2000_summary_final %>%
  
 ```
 
+We use a linear scale from 1 to 4 for red meat consumption and mapped the different responses to correspond to the four options for the FinDonor and FinRisk97 cohorts. Data on red meat consumption was not avaliable in the Health2000 cohort.  
+
+* red meat:
+    * FinDonor
+        * "never" ~ 1,
+              # never
+        * "less_than_once_weekly" ~ 2,
+              # less than once a week
+        * "1.3_week" or "4.6_week"~ 3,
+              # 1-3 times a week
+              # 4-6 times a week
+        * "daily" or "several_daily" ~ 4,
+              # daily
+              # several times a day
+    * FinRisk97
+        * "1" ~ 1, 
+              # 1 = more seldom than once a month or not at all
+        * "2" ~ 2,
+              # 2 = once or twice a month
+        * "3" or "4" or "5" ~ 3,
+              # 3 = once a week
+              # 4 = twice a week or more often
+              # 5 = almost daily
+        * "5" or "several_daily" ~ 4,
+              # 6 = daily
+              # 7 = several times a day
+    
+    NOTE: DIFFERENT CODING IN FINDONOR REPORT, WHY IS THIS DIFFERENT? 1=can't say, 2=none, 3=once a week or less, 4=1-3 times a week, 
+    5=4-6 times a week, 6=once a day
+
+```{r}
+# Recode red meat consumption to linear variable 
+
+# FinDonor
+meat_blood <- blood_data_summary_final %>% 
+  dplyr::select(ID, RedMeat) %>% 
+  gather(key = key, value =  value, -ID) %>% 
+  mutate(linear_value = case_when(value == "never" ~ 1,
+    value == "less_than_once_weekly" ~ 2,
+    value %in% c("1.3_week" , "4.6_week") ~ 3,
+    TRUE   ~ 4 )) %>% # "daily" | "several_daily"
+  dplyr::select(-value) %>% 
+  mutate(key = paste(key, "n", sep = "_")) %>% 
+  spread(key = key, value = linear_value)
+
+blood_data_summary_final <- blood_data_summary_final %>% 
+  full_join(meat_blood, by = "ID") 
+
+# FinRisk
+## DOUBLE CHECK THAT THE CODING FOR RED MEAT CONSUMPTION ACTUALLY MATCHES THE ONE I'M USING!!!!!!
+meat_fr1997 <- fr1997_summary_final %>% 
+  dplyr::select(ID, RedMeat) %>% 
+  gather(key = key, value =  value, -ID) %>% 
+  mutate(linear_value = case_when(value == "1" ~ 1,
+    value == "2" ~ 2,
+    value %in% c("3" , "4", "5") ~ 3,
+    TRUE   ~ 4 )) %>% # "6" | "7"
+  dplyr::select(-value) %>% 
+  mutate(key = paste(key, "n", sep = "_")) %>% 
+  spread(key = key, value = linear_value)
+
+fr1997_summary_final <- fr1997_summary_final %>% 
+  full_join(meat_fr1997, by = "ID") 
+
+# this part of the code creates a new variable, RedMeat_n. As we don't have red meat data from the Health2000 cohort, we need to make a column, name it RedMeat_n and input the observations as n/a.
+
+h2000_summary_final$RedMeat_n <- NA
+
+
+```
+
+
+
+
+
+
+
 
 ## Merging cohorts into one table 
 
@@ -696,6 +791,7 @@ h2000_summary_final <- h2000_summary_final %>%
          Smoking = ordered(Smoking, levels = c( "no",  "yes")),
          CurrentPregnancy = ordered(CurrentPregnancy, levels = c( "no",  "yes")))
 
+         
 
 # merge the cohorts
 
@@ -725,16 +821,32 @@ summary_all_cohorts %>%
 We use a linear scale from 1 to 4 for red meat consumption and mapped the 6 possible response the 4 codes. 
 
 * red meat:
-    * "never" ~ 1,
-    * "less_than_once_weekly" ~ 2,
-    * "1.3_week" or "4.6_week"~ 3,
-    * "daily" or "several_daily" ~ 4,
+    * FinDonor
+        * "never" ~ 1,
+              # never
+        * "less_than_once_weekly" ~ 2,
+              # less than once a week
+        * "1.3_week" or "4.6_week"~ 3,
+              # 1-3 times a week
+              # 4-6 times a week
+        * "daily" or "several_daily" ~ 4,
+              # daily
+              # several times a day
+    * FinRisk97
+        * "1" ~ 1, 
+              # 1 = more seldom than once a month or not at all
+        * "2" ~ 2,
+              # 2 = once or twice a month
+        * "3" or "4" or "5" ~ 3,
+              # 3 = once a week
+              # 4 = twice a week or more often
+              # 5 = almost daily
+        * "5" or "several_daily" ~ 4,
+              # 6 = daily
+              # 7 = several times a day
     
-    NOTE 1: DIFFERENT CODING IN FINDONOR REPORT, WHY IS THIS DIFFERENT? 1=can't say, 2=none, 3=once a week or less, 4=1-3 times a week, 
+    NOTE: DIFFERENT CODING IN FINDONOR REPORT, WHY IS THIS DIFFERENT? 1=can't say, 2=none, 3=once a week or less, 4=1-3 times a week, 
     5=4-6 times a week, 6=once a day
-    NOTE 2: FINRISK97 USES A DIFFERENT CONSUMPTION SCALE, THIS NEEDS TO BE RECODED: 1=more seldom than once a month or not at all, 2) once
-    or twice a month, 3) once a week 4) twice a week or more often, 5) almost daily, 6) daily 7) several times a day
-
 
 * Smoking:
     * "no" ~"no"
