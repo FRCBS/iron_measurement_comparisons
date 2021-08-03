@@ -26,3 +26,4 @@
 #Include .json files
 !bin/*.json
 
+.Rproj.user

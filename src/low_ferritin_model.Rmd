@@ -6,6 +6,8 @@ output: github_document
 bibliography: index.bib
 ---
 
+*** THE FIRST PART HAS BEEN MOVED TO THE PROJECT "LOW FERRITIN DATA". THIS PART SHOULD START WITH LOADING THE DATA PRODUCED IN THAT PROJECT. DO NOT USE THIS CODE IN ITS CURRENT STATE ***
+
 Based on the original code written by Muriel Lobier and Mikko Arvas (https://github.com/FRCBS/iron_levels_of_blood_donors/blob/master/src/index.Rmd and https://github.com/FRCBS/changes_in_donor_health/blob/master/src/explorative_analysis.Rmd)
 
 # Summary
@@ -338,13 +340,18 @@ h2000_n_women_removed <- h2000_summary_final %>%
   filter(Group ==  "Women_pre_menop_no_mens") %>%
   nrow()
 
+table(h2000$BD03, h2000$SP2)
+table(h2000$MENOP, h2000$SP2)
+table(h2000$MENOP, h2000$BD03)
 
+#BD03 = reg, irreg, no
+#MENOP = post, peri, pre 
 ```
 
 We now define the following groups:
 
-+ pre-menopausal: regular or irregular menstruation reported
-+ post-menopausal: no menstruation reported and age equal to > 45
++ premenopausal: regular or irregular menstruation reported
++ postmenopausal: no menstruation reported and age equal to > 45
 + donors younger than 45 and no reported menstruation are excluded (`r n_women_removed` donors)
 
 
@@ -481,22 +488,22 @@ blood_data_summary_final <- blood_data_summary_final %>%
   filter(!is.na(Smoking))
 
 # FinRisk97
+fr1997_summary_final$Smoking[is.na(fr1997_summary_final$Smoking)]  <- 3
+
 # nb_removed_fr97 <- nb_removed_fr97 +
 #                             fr1997_summary_final %>% filter(is.na(Smoking)) %>% nrow() 
 # 
 # fr1997_summary_final <- fr1997_summary_final %>% 
 #   filter(!is.na(Smoking))
 
-test_smoking <- fr1997_summary_final
-test_smoking$Smoking[is.na(test_smoking$Smoking) <- 3]
-
 # Health2000
+h2000_summary_final$Smoking[is.na(h2000_summary_final$Smoking)]  <- 3
+
 # nb_removed_h2000 <- nb_removed_h2000 +
 #                             h2000_summary_final %>% filter(is.na(Smoking)) %>% nrow() 
 # 
 # h2000_summary_final <- h2000_summary_final %>% 
 #   filter(!is.na(Smoking))
-
 
 ```
 
@@ -793,38 +800,33 @@ For the code to work all three cohorts need to be merged into one single table. 
 ### mutate smoking and pregnancy 
 blood_data_summary_final <- blood_data_summary_final %>% 
   dplyr::select(ID, Group, Sex, Age, TwoYearsFromStartCount_FB, DaysToPreviousFB,
-                Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, HistoryOfIronSupplements, GivenIronSupplements, IronComplience,
-                IronComplienceNumeric, PreviousChildbirth, CurrentPregnancy, CRP, Cohort) %>% 
+                Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, HistoryOfIronSupplements, IronComplienceNumeric, PreviousChildbirth,
+                CRP, Cohort) %>% 
     mutate(Smoking = ifelse(Smoking == "daily", "yes", "no"),
-         Smoking = ordered(Smoking, levels = c( "no",  "yes")))
+         Smoking = factor(Smoking, levels = c( "no",  "yes")))
+
+#HistoryOfIronSupplements!!!!!!!!
 
 ### mutate smoking and pregnancy 
 fr1997_summary_final <- fr1997_summary_final %>% 
   dplyr::select(ID, Group, Sex, Age, TwoYearsFromStartCount_FB, DaysToPreviousFB,
-                Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, HistoryOfIronSupplements, GivenIronSupplements, IronComplience,
-                IronComplienceNumeric, PreviousChildbirth, CurrentPregnancy, CRP, Cohort) %>% 
+                Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, HistoryOfIronSupplements, IronComplienceNumeric, PreviousChildbirth,
+                CRP, Cohort) %>% 
        mutate(Smoking = ifelse(Smoking == "1", "yes", "no"),
-       Smoking = ordered(Smoking, levels = c( "no",  "yes")),
-       CurrentPregnancy = ordered(CurrentPregnancy, levels = c( "no",  "yes")))
+       Smoking = factor(Smoking, levels = c( "no",  "yes")))
 
 ### mutate smoking and pregnancy
 h2000_summary_final <- h2000_summary_final %>% 
   dplyr::select(ID, Group, Sex, Age, TwoYearsFromStartCount_FB, DaysToPreviousFB,
-                Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, HistoryOfIronSupplements, GivenIronSupplements, IronComplience,
-                IronComplienceNumeric, PreviousChildbirth, CurrentPregnancy, CRP, Cohort) %>% 
+                Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, HistoryOfIronSupplements, IronComplienceNumeric, PreviousChildbirth,
+                CRP, Cohort) %>% 
          mutate(Smoking = ifelse(Smoking == "1", "yes", "no"),
-         Smoking = ordered(Smoking, levels = c( "no",  "yes")),
-         CurrentPregnancy = ordered(CurrentPregnancy, levels = c( "no",  "yes")))
-
+         Smoking = factor(Smoking, levels = c( "no",  "yes")))
          
 
 # merge the cohorts
 
 summary_all_cohorts <- bind_rows(blood_data_summary_final, fr1997_summary_final, h2000_summary_final)
-
-
-
-  
 
 ```
 
@@ -873,7 +875,7 @@ regression_cohorts <- summary_all_cohorts %>%
             last_donation = DaysToPreviousFB,
             iron_complience = IronComplienceNumeric) %>% 
      mutate(Age = Age / 5, 
-            don_ct_2 = donation_count^2,
+            donation_count_2 = donation_count^2,
             log_ferritin = log(Ferritin),
             log_last_donation = log(last_donation)/log(2),
             log_CRP = log(CRP)) 
@@ -914,8 +916,10 @@ We center all variables entered as continuous.
 #   mutate(value = scale(value, scale = FALSE)[,1]) %>% 
 #   spread(key = key, value = value)
 # ei ehkä tarvita tätä kohtaa 
-# manually entered N/A:s, is this why this part doesn't work?   
-  
+
+test_data_pre_women <- regression_cohorts %>% 
+  select(ID, #luokkamuuttujat mitä ei transformoida)
+
 test_data_pre_women <- regression_cohorts %>% 
   filter(Group == "Pre_menopause_women") %>% 
   dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
