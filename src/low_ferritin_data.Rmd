@@ -56,6 +56,8 @@ library(tidymodels)
 
 ## Data loading
 
+We have one cohort of blood donors, FinDonor, and two general population cohorts, FinRisk97 and Health2000. 
+
 ```{r , warning=FALSE}
 
 # load FinDonor biomarker data
@@ -79,13 +81,12 @@ rm(thldata)
 
 ## Data preparation
 
-```{r}
-# Assign participants to their specific cohorts 
+First we assign study participants to their cohorts.
 
+```{r}
 indiv_donations_data$Cohort <- c("FINDONOR")
 fr1997$Cohort <- c("FINRISK97")
 h2000$Cohort <- c("HEALTH00")
-
 ```
 
 There are `r cohort_name %>% distinct(ID_variable) %>% nrow()` individials enrolled in the studies. 
@@ -99,16 +100,18 @@ Once we remove participants that have no ferritin or no Hb measurement data (and
   * FinDonor: 2580 `r indiv_donations_data %>%  filter(!is.na(Ferritin) & !is.na(Hb_v) ) %>% distinct(donor) %>% nrow()`
   
   * FinRisk97: 462 `r fr1997 %>%  filter(!is.na(FERRITIN) & !is.na(HGB) ) %>% distinct(RELEASE_ID) %>% nrow()`
+           
             * 7380 `r fr1997 %>% filter(!is.na(FERRITIN)) %>% distinct(RELEASE_ID) %>% nrow()`
             * 491 `r fr1997 %>%  filter(!is.na(HGB)) %>% distinct(RELEASE_ID) %>% nrow()`
               
   * Health2000: 5250 `r h2000 %>%  filter(!is.na(FERRITIINI) & !is.na(B_Hb) ) %>% distinct(RELEASE_ID) %>% nrow()`
 
-At this stage we noticed we only had hemoglobin data from 491 FinRisk97 participants. Using the table function (`r table(fr1997$HGB, fr1997$SUKUP)`, SUKUP = sukupuoli = sex, 1=male, 2=female) we found out that all these participants are male. As such, we didn't remove N/A:s for Hb and will not use Hb in the model for this specific cohort.  
-
+At this stage we noticed we only had hemoglobin data from 491 FinRisk97 participants. Using the table function (`r table(fr1997$HGB, fr1997$SUKUP)`, SUKUP = sukupuoli = sex, 1=male, 2=female) we found out that all these participants are male. As such, we didn't remove NA:s for Hb and will not use Hb in the model for this specific cohort.  
 
 ```{r , warning=FALSE}
+
 #FINDONOR
+
 ## Get sex for each blood donor
 blood_data_summary <- indiv_donations_data %>% 
   group_by(donor) %>% 
@@ -130,8 +133,8 @@ blood_data_summary <- donor_demo %>%
   inner_join(blood_data_summary, by = "donor") %>%
   mutate(all_study_FB_donation_count = NonFinnDonorDonationCount_FB + YesFinnDonorDonationCount_FB) 
 
-
 #FINRISK97 
+
 ## Change sex from binary 1,2 to men, women
 fr1997$SUKUP <- gsub("1", "Men", fr1997$SUKUP)
 fr1997$SUKUP <- gsub("2", "Women", fr1997$SUKUP)
@@ -176,11 +179,9 @@ h2000_summary <- h2000 %>%
 
 ```
 
-
+Next we rename the variables. 
 
 ```{r}
-# Rename variables to maintain cohesion between the cohorts
-  
 ## Participant ID 
 names(blood_data_summary)[names(blood_data_summary) == "donor"] <- "ID"
 names(fr1997_summary)[names(fr1997_summary) == "RELEASE_ID"] <- "ID"
@@ -232,10 +233,13 @@ names(fr1997_summary)[names(fr1997_summary) == "GRAVID"] <- "CurrentPregnancy"
 names(h2000_summary)[names(h2000_summary) == "BD07"] <- "CurrentPregnancy"
 ```
 
-
 ## Demographic group specification and assignment
 
-In this section we assign women to period/no period groups.
+In this section we assign women to period/no period groups. The menstruation question was similar across all three cohorts:
+
+  * FinDonor: Do you still have regular periods? (1=reg., 2=irreg., 3=no)
+  * FinRisk97: Do you still menstruate? (1=reg., 2=irreg., 3=no)
+  * Health2000: BD03 = do you have periods nowadays? (1=reg., 2=irreg., 3=no)
 
 There are `r cohort_summary_name %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()` women with no  answer to the question regarding their menstrual status. 
 
@@ -243,7 +247,7 @@ There are `r cohort_summary_name %>% filter(Sex == "Women" & is.na(Menstruation)
   * FinRisk97: 41 `r fr1997_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
   * Health00: 1043 `r h2000_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
   
-We are missing menstruation data from >37 % of female Health2000 participants. Menstruation was defined as: 
+Evidently we are missing menstruation data from >37 % of female Health2000 participants. Menstruation was defined as: 
     1 = regular menstruation
     2 = irregular menstruation
     3 = no menstruation
@@ -252,7 +256,7 @@ The cohort also contains a variable for reproductive stages, MENOP:
     2 = perimenopause
     3 = premenopause
     
-Removing n/a:s for this variable `r h2000_summary %>% filter(Sex == "Women" & is.na(MENOP)) %>%  nrow()` causes loss of 62 participants.
+Removing n/a:s for the MENOP variable `r h2000_summary %>% filter(Sex == "Women" & is.na(MENOP)) %>%  nrow()` would remove only 62 participants. In the next code chunk we investigate the difference between these variables in order to figure out which we can/should use.
 
 ```{r}
 h2000_mens_missing <- h2000_summary 
@@ -320,12 +324,11 @@ table(h2000_test_again$BD03, h2000_test_again$MENOP)
   # no        231   45    28
 ```
 
+Out of the women with no answer to the menstruation question, `r cohort_summary_name %>% filter(Sex == "Women" & is.na(Menstruation) & age > 55) %>%  nrow()` are older than 55. We impute these to no period so they can be included in the postmenopausal women. 
 
-Of these, `r cohort_summary_name %>% filter(Sex == "Women" & is.na(Menstruation) & age > 55) %>%  nrow()` are older than 55. We impute these to no period so they can be included in the postmenopausal women. 
-
-FinDonor: Do you still have regular periods? (1=reg, 2=irreg, 3=no)
-FinRisk97: Do you still menstruate? (1=reg, 2=irreg, 3=no)
-Health2000: BD03 = do you have periods nowadays? (1=reg, 2=irreg, 3=no)
+  * FinDonor: 3 `r blood_data_summary %>% filter(Sex == "Women" & is.na(Menstruation) & Age > 55) %>%  nrow()`
+  * FinRisk97: 31 `r fr1997_summary %>% filter(Sex == "Women" & is.na(Menstruation) & Age > 55) %>%  nrow()`
+  * Health2000: 16 `r h2000_summary %>% filter(Sex == "Women" & is.na(Menstruation) & Age > 55) %>%  nrow()`
 
 ```{r}
 # FINDONOR
@@ -358,6 +361,9 @@ h2000_summary <- h2000_summary %>%
 
 Female study participants with no menstruation response after imputation are removed:  `r cohort_name %>% filter(sex == "Women" & is.na(Menstruation)) %>% nrow()` donors.)
 
+  * FinDonor: 14 `r blood_data_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
+  * FinRisk97: 10 `r fr1997_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
+  * Health2000: 46 `r h2000_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
 
 ```{r}
 #FINDONOR
@@ -464,9 +470,7 @@ We now define the following groups:
 
 + premenopausal: regular or irregular menstruation reported
 + postmenopausal: no menstruation reported and age equal to > 45
-+ donors younger than 45 and no reported menstruation are excluded (`r n_women_removed` donors)
-
-
++ donors younger than 45 and no reported menstruation are excluded (`r cohort_n_women_removed` donors)
 
 ```{r}
 #FINDONOR:
@@ -523,35 +527,38 @@ h2000_summary_final <- h2000_summary_final %>%
 
 ```
 
-In order to later merge the three cohorts into one table, we need to make colums for the variables the different cohorts don't take into consideration. 
+In order to later merge the three cohorts into one table, we need to make colums for the variables missing variables in each cohort and impute values for them. 
+
+The general population cohorts don't contain any information on blood donor activity. As seen in a previous FinDonor study the effect of full blood donation on ferritin levels is marginal after 1000 days (see Lobier et al. 2019, https://pubmed.ncbi.nlm.nih.gov/31408501/). After referring to these results we decided to assign a randomized donation interval between three to six years for the general population cohorts.  
 
 ```{r}
-# We make new columns for donation data for the general population cohorts
-fr1997_summary_final$TwoYearsFromStartCount_FB <- 0
-h2000_summary_final$TwoYearsFromStartCount_FB <- 0
+# Add new columns and impute values for them
 
-# We then  assign a randomized donation interval for 3-6 years for the general population cohorts (at this point ferritin levels out, see Lobier et al.)
-fr1997_summary_final <- fr1997_summary_final %>% mutate(DaysToPreviousFB = round(runif(nrow(fr1997_summary_final), min = 3*365, max = 6*365) ,0))
-h2000_summary_final <- h2000_summary_final %>% mutate(DaysToPreviousFB = round(runif(nrow(h2000_summary_final), min = 3*365, max = 6*365) ,0))
-
-# Add columns for the variables that are missing from the cohorts (CurrentPregnancy for FinDonor, RedMeat for Health2000 and all iron supplement variables for both general population cohorts) and add values to them (NA for history of iron supplements, 0 for the rest)
 blood_data_summary_final$CurrentPregnancy <- 0
+
+fr1997_summary_final$TwoYearsFromStartCount_FB <- 0
 fr1997_summary_final$HistoryOfIronSupplements <- NA
 fr1997_summary_final$GivenIronSupplements <- 0
 fr1997_summary_final$IronComplience <- 0
 fr1997_summary_final$IronComplienceNumeric <- 0
+
+h2000_summary_final$TwoYearsFromStartCount_FB <- 0
 h2000_summary_final$HistoryOfIronSupplements <- NA
 h2000_summary_final$GivenIronSupplements <- 0
 h2000_summary_final$IronComplience <- 0
 h2000_summary_final$IronComplienceNumeric <- 0
 h2000_summary_final$RedMeat <- NA
+
+# We then  assign a randomized donation interval for 3-6 years for the general population cohorts 
+fr1997_summary_final <- fr1997_summary_final %>% mutate(DaysToPreviousFB = round(runif(nrow(fr1997_summary_final), min = 3*365, max = 6*365) ,0))
+h2000_summary_final <- h2000_summary_final %>% mutate(DaysToPreviousFB = round(runif(nrow(h2000_summary_final), min = 3*365, max = 6*365) ,0))
 ```
 
 ## Remove cohort participants with missing data
 
 ### Donation history
 
-We remove `r blood_data_summary_final %>% filter(is.na(DaysToPreviousFB)) %>% nrow()`, that is donors who have not donated previously (they are missing the nb of days since last FB donation variable). As there is no information on blood donation in the general population cohorts this is not done for them. 
+We remove `r blood_data_summary_final %>% filter(is.na(DaysToPreviousFB)) %>% nrow()` = 42 blood donors who have not donated previously (they are missing the number of days since last donation variable). 
 
 ```{r}
 new_donors_data <- blood_data_summary_final %>% 
@@ -569,6 +576,9 @@ blood_data_summary_final <- blood_data_summary_final %>%
 ### BMI
 
 We remove `r cohort_name %>% filter(is.na(BMI)) %>% nrow()` participants for whom we do not have the BMI data:
+ * FinDonor: 21 `r blood_data_summary_final %>% filter(is.na(BMI)) %>% nrow()`
+ * FinRisk97: 8 `r fr1997_summary_final %>% filter(is.na(BMI)) %>% nrow()`
+ * Health2000: 6 `r h2000_summary_final %>% filter(is.na(BMI)) %>% nrow()`
 
 ```{r}
 #### FinDonor
@@ -598,9 +608,11 @@ h2000_summary_final <- h2000_summary_final %>%
 We remove `r cohort_name %>% filter(is.na(BMI)) %>% nrow()` participants for whom we do not have Smoking data:
   * FinDonor: 1      `r blood_data_summary_final %>% filter(is.na(Smoking)) %>% nrow()`
   * FinRisk97: 3086  `r fr1997_summary_final  %>% filter(is.na(Smoking)) %>% nrow()`
-  * Health2000: 1560 `r h2000_summary_final %>% filter(is.na(Smoking)) %>% nrow()` 
+           * `r fr1997 %>%  filter(is.na(Q69)) %>%  nrow()` = 3377/7943 -> 43 % missing
+  * Health2000: 2189 `r h2000_summary_final %>% filter(is.na(Smoking)) %>% nrow()` 
+           * `r h2000 %>%  filter(is.na(FB05)) %>%  nrow()` = 2743/6264 -> 44 % missing
   
-As removing n/a:s for smoking removes >4600 general population participants as opposed to only one in the blood donor cohort, we suspect there being something wrong with the original data. At this point we impute the n/a:s for the general population cohorts, while we wait for THL to explain the missing data. 
+As removing n/a:s for smoking removes >5000 general population participants as opposed to only one in the blood donor cohort, we suspect there being something wrong with the original data. Looking at the original rdata makes it clear this is not a coding error. At this point we impute the n/a:s for the general population cohorts as non-smokers, while we wait for THL to explain the missing data. 
 
 ```{r}
 # FinDonor
@@ -613,28 +625,29 @@ blood_data_summary_final <- blood_data_summary_final %>%
 # FinRisk97
 fr1997_summary_final$Smoking[is.na(fr1997_summary_final$Smoking)]  <- 3
 
-# nb_removed_fr97 <- nb_removed_fr97 +
-#                             fr1997_summary_final %>% filter(is.na(Smoking)) %>% nrow() 
-# 
-# fr1997_summary_final <- fr1997_summary_final %>% 
-#   filter(!is.na(Smoking))
+nb_removed_fr97 <- nb_removed_fr97 +
+                            fr1997_summary_final %>% filter(is.na(Smoking)) %>% nrow()
+
+fr1997_summary_final <- fr1997_summary_final %>%
+  filter(!is.na(Smoking))
 
 # Health2000
 h2000_summary_final$Smoking[is.na(h2000_summary_final$Smoking)]  <- 3
 
-# nb_removed_h2000 <- nb_removed_h2000 +
-#                             h2000_summary_final %>% filter(is.na(Smoking)) %>% nrow() 
-# 
-# h2000_summary_final <- h2000_summary_final %>% 
-#   filter(!is.na(Smoking))
+nb_removed_h2000 <- nb_removed_h2000 +
+                            h2000_summary_final %>% filter(is.na(Smoking)) %>% nrow()
+
+h2000_summary_final <- h2000_summary_final %>%
+  filter(!is.na(Smoking))
 
 ```
 
 ### Previous childbirth
 
-We remove `r cohort_name %>% filter((group != "Men" & is.na(QR83)))%>% nrow()` female donors who did not answer the question about childbirth: 
-
-Women who answer no to the of previous childbirth = nulliparous women
+We remove `r cohort_name %>% filter((group != "Men" & is.na(PreviousChildbirth)))%>% nrow()` female donors who did not answer the question on childbirth: 
+  * FinDonor: 3 `r blood_data_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
+  * FinRisk97: 8 `r fr1997_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
+  * Health2000: 0 `r h2000_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
 
 ```{r}
 #### FinDonor
@@ -662,7 +675,17 @@ h2000_summary_final <- h2000_summary_final %>%
 
 ### Current pregnancy
 
-Because 1246 Health2000 cohort participants didn't answer the pregnancy question we will add a filter for <45 years old, which leaves us with 111 missing answers. NA:s in >45-year-oldes are imputed as not pregnant. Although pregnancy is possible after this age, chances are lower. We also used this age as our cut-off for menopause. We will now remove `r cohort_name %>% filter((group != "Men" & is.na(QR83)))%>% nrow()` females who did not answer the pregnancy question: 
+Because 1246 Health2000 cohort participants didn't answer the pregnancy question we will add a filter for age <45 years old, which leaves us with 111 missing answers. NA:s in >45-year-oldes are imputed as not pregnant. Although pregnancy is possible after this age, chances are lower. We used this age as our cut-off for menopause. We also used the table function to see the age variance in the women who reported that they were pregnant during the study:
+
+    30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70
+  0 41 58 84 64 66 61 60 69 60 71 54 63 66 76 56 67 64 54 62 47 40 30 33 33 20  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
+  1  1  3  6  2  4  2  1  3  2  0  0  1  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
+
+As can be seen in the table above, the oldest pregnant Health2000 participant was 41, and only 9 participants over the age of 35 reported pregnancy.
+
+We will now remove `r cohort_name %>% filter((Group != "Men" & is.na(CurrentPregnancy)))%>% nrow()` females who did not answer the pregnancy question: 
+  * FinRisk97: 9 `r fr1997_summary_final %>% filter((Group != "Men" & is.na(CurrentPregnancy)))%>% nrow()`
+  * Health00: 111 `r h2000_summary_final %>% filter((Group != "Men" & Age <=45 & is.na(CurrentPregnancy)))%>% nrow()`
 
 ```{r}
 # FinRisk97
@@ -673,6 +696,10 @@ fr1997_summary_final <- fr1997_summary_final %>%
   filter(!(Group != "Men" & is.na(CurrentPregnancy)))
 
 # Health2000
+
+# check age variance 
+table(h2000_summary_final$CurrentPregnancy, h2000_summary_final$Age)
+
 nb_removed_h2000 <- nb_removed_h2000 +
                             h2000_summary_final %>% filter((Group != "Men" & Age <=45 & is.na(CurrentPregnancy))) %>% nrow 
 
@@ -901,7 +928,7 @@ Previous childbirth is recoded
 * FinRisk97: how many children have you given birth to? 1=none, 2=one, 3=two, 4=three or more
 * Health2000: have you given birth? 0=no, 1=yes
 
-Nulliparous women are coded as 0 (no) and reporting childbirth or giving birth to any number of children to 1 (yes). 
+Nulliparous women are coded as 0 (no) and reporting childbirth or giving birth to any number of children as 1 (yes). 
 
 ```{r}
 # FinDonor
