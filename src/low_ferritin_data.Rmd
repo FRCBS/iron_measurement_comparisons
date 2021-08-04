@@ -1028,10 +1028,10 @@ Data transformations:
     * Coefficients:
         * All dependent variables entered as continuous varaibles are centered but not scaled. 
 
-## Premenopausal women
-### Data pre-processing
-
 We center all variables entered as continuous.
+
+## Premenopausal women
+
 
 ```{r}
 # Center variables
@@ -1062,6 +1062,51 @@ test_data_pre_women <- regression_cohorts %>%
   dplyr::select(-ID)
 
 ```
+
+## Postmenopausal women
+
+```{r}
+test_data_post_women <- regression_cohorts %>% 
+  select(ID, Smoking, Sex, Ferritin, Hb)  
+         #luokkamuuttujat mitä ei transformoida tähän kohtaan
+
+test_data_post_women <- regression_cohorts %>% 
+  filter(Group == "Post_menopause_women") %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2) %>% 
+  full_join(test_data_post_women, by = "ID")  %>% 
+  dplyr::select(-ID)
+
+```
+
+
+## Men
+
+
+```{r}
+test_data_men <- regression_cohorts %>% 
+  select(ID, Smoking, Sex, Ferritin, Hb)  
+         #luokkamuuttujat mitä ei transformoida tähän kohtaan
+
+test_data_men <- regression_cohorts %>% 
+  filter(Group == "Men") %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2) %>% 
+  full_join(test_data_men, by = "ID")  %>% 
+  dplyr::select(-ID)
+
+```
+
 
 
 ### Mutiple regression - ferritin as outcome
@@ -1200,13 +1245,6 @@ ggpairs(test_data_pre_women,
 ```
 
 
-## Postmenopausal women
-### Data pre-processing
-
-
-
-## Men
-### Data pre-processing
 
 
 
