@@ -127,7 +127,7 @@ blood_values_init <- indiv_donations_data %>%
   ungroup()
 
 blood_data_summary <- blood_data_summary %>% 
-  full_join(blood_values_init, by = "donor") 
+    full_join(blood_values_init, by = "donor") 
 
 blood_data_summary <- donor_demo %>%
   inner_join(blood_data_summary, by = "donor") %>%
@@ -348,60 +348,73 @@ h2000_mens_missing %>%
   nrow() 
 # 43 women with missing data are < 45 years 
 
-h2000_missing_menstruation <- h2000_mens_missing %>% 
-  filter(Age < 55 & !is.na(Menstruation)) 
 
-women_over_55 <- h2000_mens_missing %>% 
-  filter(Age >= 55) 
+women_older_than_55 <- h2000_mens_missing %>% 
+  filter(Age >= 55) %>% nrow() # 849 women 
 
-# assign women > 55 yrs to no menstruation
-women_over_55$MENSTRUATION <- "no"
+women_older_than_55 <- filter(h2000_mens_missing,
+                              Age >= 55 & is.na(Menstruation))$ID
 
-# join the two separate tables 
+test <- h2000_mens_missing %>% 
+  mutate(Menstruation = ifelse(ID %in% women_older_than_55, "no", as.character(Menstruation))) 
 
-h2000_missing_menstruation <- h2000_missing_menstruation %>% 
-  group_by(ID) %>% 
-  dplyr::select(MENSTRUATION, Stage, AgeGroup, Age) %>% 
-  ungroup()
-
-h2000_missing_menstruation <- h2000_missing_menstruation %>% 
-  full_join(women_over_55, by = "ID") 
 
 ```
 
+For now we will remove  n/a:s from women under 55 and use the same strategy for assigning reproductive groups as we do for the other cohorts. Once we recieve an explanation for the reasoning behind the MENOP-varible we may reconcider. 
+
+
 ## Demographic group specification and assignment continued
 
-Out of the women with no answer to the menstruation question, `r cohort_summary_name %>% filter(Sex == "Women" & is.na(Menstruation) & age > 55) %>%  nrow()` are older than 55. We impute these to no period so they can be included in the postmenopausal women. 
+Out of the women with no answer to the menstruation question, `r cohort_summary_name %>% filter(Sex == "Women" & is.na(Menstruation) & age >= 55) %>%  nrow()` are older than 55. We impute these to no period so they can be included in the postmenopausal women. 
 
-  * FinDonor: 3 `r blood_data_summary %>% filter(Sex == "Women" & is.na(Menstruation) & Age > 55) %>%  nrow()`
-  * FinRisk97: 31 `r fr1997_summary %>% filter(Sex == "Women" & is.na(Menstruation) & Age > 55) %>%  nrow()`
-  * Health2000: 16 `r h2000_summary %>% filter(Sex == "Women" & is.na(Menstruation) & Age > 55) %>%  nrow()`
+  * FinDonor: 3 `r blood_data_summary %>% filter(Sex == "Women" & is.na(Menstruation) & Age >= 55) %>%  nrow()`
+  * FinRisk97: 32 `r fr1997_summary %>% filter(Sex == "Women" & is.na(Menstruation) & Age >= 55) %>%  nrow()`
+  * Health2000: 849 `r h2000_summary %>% filter(Sex == "Women" & is.na(Menstruation) & Age >= 55) %>%  nrow()`
 
 ```{r}
 # FINDONOR
 older_findonor_donors <- filter(blood_data_summary, 
-                       Sex == "Women" & is.na(Menstruation) & Age > 55)$ID
+                       Sex == "Women" & is.na(Menstruation) & Age >= 55)$ID
 
 blood_data_summary <- blood_data_summary %>% 
   mutate(Menstruation = ifelse(ID %in% older_findonor_donors, "no_period", as.character(Menstruation))) 
 
-#FINRISK97
+# FINRISK97
 older_fr1997 <- filter(fr1997_summary, 
-                       Sex == "Women" & is.na(Menstruation) & Age > 55)$ID
+                       Sex == "Women" & is.na(Menstruation) & Age >= 55)$ID
 
 fr1997_summary <- fr1997_summary %>% 
   mutate(Menstruation = ifelse(ID %in% older_fr1997, "no_period", as.character(Menstruation)))
 
-#HEALTH2000
-# older_h2000 <- filter(h2000_summary,
-#                       Sex == "Women" & is.na(Menstruation) & Age > 55)$ID
-# 
-# h2000_summary <- h2000_summary %>% 
-#   mutate(Menstruation = ifelse(ID %in% older_h2000, "no_period", as.character(Menstruation)))
+# HEALTH2000
 older_h2000 <- filter(h2000_summary,
-                      Sex == "Women" & is.na(MENOP) & Age > 55)$ID
-h2000_summary <- h2000_summary %>% 
-  mutate(Menstruation = ifelse(ID %in% older_h2000, "no_period", as.character(MENOP)))
+                      Sex == "Women" & is.na(Menstruation) & Age >= 55)$ID
+
+h2000_summary <- h2000_summary %>%
+  mutate(Menstruation = ifelse(ID %in% older_h2000, "no_period", as.character(Menstruation)))
+
+# h2000_mens_missing <- h2000_summary 
+# 
+# # renaming the menstruation variable
+# h2000_mens_missing <- h2000_mens_missing %>% 
+#   mutate(Menstruation = case_when(
+#     Menstruation == "1" ~ "regular",
+#     Menstruation == "2" ~ "irregular",
+#     Menstruation == "3" ~ "no"
+#   )) %>% 
+#   filter(Sex == "Women") 
+# 
+# women_older_than_55 <- filter(h2000_mens_missing,
+#                               Age >= 55 & is.na(Menstruation))$ID
+# 
+# women_older_than <- h2000_mens_missing %>% 
+#   mutate(MENSTRUATION = ifelse(ID %in% women_older_than_55, "no", as.character(MENSTRUATION))) 
+# 
+# older_h2000 <- filter(h2000_summary,
+#                       Sex == "Women" & is.na(MENOP) & Age > 55)$ID
+# h2000_summary <- h2000_summary %>% 
+#   mutate(Menstruation = ifelse(ID %in% older_h2000, "no_period", as.character(MENOP)))
 
 ```
 
@@ -409,8 +422,8 @@ h2000_summary <- h2000_summary %>%
 Female study participants with no menstruation response after imputation are removed:  `r cohort_name %>% filter(sex == "Women" & is.na(Menstruation)) %>% nrow()` donors.)
 
   * FinDonor: 14 `r blood_data_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
-  * FinRisk97: 10 `r fr1997_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
-  * Health2000: 46 `r h2000_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
+  * FinRisk97: 9 `r fr1997_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
+  * Health2000: 180 `r h2000_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
 
 ```{r}
 #FINDONOR
@@ -438,6 +451,7 @@ findonor_n_women_removed <- blood_data_summary_final %>%
 
 
 #FINRISK97
+
 finrisk_nb_women_no_menstruation_response <- fr1997_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>% nrow()
 
 
@@ -462,54 +476,60 @@ fr1997_n_women_removed <- fr1997_summary_final %>%
   nrow()
 
 #HEALTH2000
-# h2000_nb_women_no_menstruation_response <- h2000_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>% nrow()
-# 
-# 
-# ## remove female Health2000 participants with no menstruation response
-# h2000_summary_final <- h2000_summary %>% 
-#   mutate(mens_ok_h2000 = case_when(
-#     Sex == "Men" ~ "Men", 
-#     Sex == "Women" & !is.na(Menstruation)  ~ "Women",
-#     TRUE ~ "NA")) %>% 
-#   filter(mens_ok_h2000 != "NA") 
-# 
-# ## We define the women's groups:
-# h2000_n_women_removed <- h2000_summary_final %>%
-#   mutate(Group = case_when(
-#     Sex == "Men" ~ "Men",
-#     Sex == "Women" & (Menstruation == "3" & Age > 45) ~ "Post_menopause_women",
-#     Sex == "Women" & (Menstruation == "3" & Age <= 45) ~ "Women_pre_menop_no_mens",
-#     Sex == "Women" & (Menstruation == "1" | Menstruation == "2") ~ "Pre_menopause_women",
-#     TRUE ~ "NA")) %>%
-#   group_by(Group) %>%
-#   filter(Group ==  "Women_pre_menop_no_mens") %>%
-#   nrow()
+
+h2000_summary <- h2000_summary %>%
+  mutate(Menstruation = ifelse(ID %in% older_h2000, "no_period", as.character(Menstruation)))
+
 
 
 h2000_nb_women_no_menstruation_response <- h2000_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>% nrow()
-h2000_nb_women_no_menstruation_response <- h2000_summary %>% filter(Sex == "Women" & is.na(MENOP)) %>% nrow()
-h2000_summary %>% filter(MENOP == "2") %>% nrow() # 103 perimenopausal women 
 
 
-## remove female Health2000 participants with no MENOP response and perimenopausal women
-h2000_summary_final <- h2000_summary %>% 
+## remove female Health2000 participants with no menstruation response
+h2000_summary_final <- h2000_summary %>%
   mutate(mens_ok_h2000 = case_when(
-    Sex == "Men" ~ "Men", 
-    Sex == "Women" & !is.na(MENOP)  ~ "Women",
-    TRUE ~ "NA")) %>% 
-  filter(mens_ok_h2000 != "NA") 
-  #%>% filter("Women" & MENOP != "2")
+    Sex == "Men" ~ "Men",
+    Sex == "Women" & !is.na(Menstruation)  ~ "Women",
+    TRUE ~ "NA")) %>%
+  filter(mens_ok_h2000 != "NA")
 
 ## We define the women's groups:
 h2000_n_women_removed <- h2000_summary_final %>%
   mutate(Group = case_when(
     Sex == "Men" ~ "Men",
-    Sex == "Women" & (MENOP == "1") ~ "Post_menopause_women",
-    Sex == "Women" & (MENOP == "3") ~ "Pre_menopause_women",
+    Sex == "Women" & (Menstruation == "3" & Age > 45) ~ "Post_menopause_women",
+    Sex == "Women" & (Menstruation == "3" & Age <= 45) ~ "Women_pre_menop_no_mens",
+    Sex == "Women" & (Menstruation == "1" | Menstruation == "2") ~ "Pre_menopause_women",
     TRUE ~ "NA")) %>%
   group_by(Group) %>%
   filter(Group ==  "Women_pre_menop_no_mens") %>%
   nrow()
+# 
+# 
+# h2000_nb_women_no_menstruation_response <- h2000_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>% nrow()
+# h2000_nb_women_no_menstruation_response <- h2000_summary %>% filter(Sex == "Women" & is.na(MENOP)) %>% nrow()
+# h2000_summary %>% filter(MENOP == "2") %>% nrow() # 103 perimenopausal women 
+# 
+# 
+# ## remove female Health2000 participants with no MENOP response and perimenopausal women
+# h2000_summary_final <- h2000_summary %>% 
+#   mutate(mens_ok_h2000 = case_when(
+#     Sex == "Men" ~ "Men", 
+#     Sex == "Women" & !is.na(MENOP)  ~ "Women",
+#     TRUE ~ "NA")) %>% 
+#   filter(mens_ok_h2000 != "NA") 
+#   #%>% filter("Women" & MENOP != "2")
+# 
+# ## We define the women's groups:
+# h2000_n_women_removed <- h2000_summary_final %>%
+#   mutate(Group = case_when(
+#     Sex == "Men" ~ "Men",
+#     Sex == "Women" & (MENOP == "1") ~ "Post_menopause_women",
+#     Sex == "Women" & (MENOP == "3") ~ "Pre_menopause_women",
+#     TRUE ~ "NA")) %>%
+#   group_by(Group) %>%
+#   filter(Group ==  "Women_pre_menop_no_mens") %>%
+#   nrow()
 
 ```
 
@@ -517,11 +537,14 @@ We now define the following groups:
 
 + premenopausal: regular or irregular menstruation reported
 + postmenopausal: no menstruation reported and age equal to > 45
-+ donors younger than 45 and no reported menstruation are excluded (`r cohort_n_women_removed` donors)
++ donors younger than 45 and no reported menstruation are excluded (`r cohort_n_women_removed`)
+  * 77 FinFonor `r findonor_n_women_removed`
+  * 81 FinRisk `r fr1997_n_women_removed`
+  * 83 FinFonor `r h2000_n_women_removed`
 
 ```{r}
 #FINDONOR:
-## We define the women's groups: 
+## We define the women's groups and drop n/a:s: 
 blood_data_summary_final <- blood_data_summary_final %>% 
   mutate(Group = case_when(
     Sex == "Men" ~ "Men", 
@@ -535,40 +558,56 @@ blood_data_summary_final <- blood_data_summary_final %>%
 
 
 #FINRISK97:
-## We define the women's groups: 
+## We define the women's groups and drop n/a:s: 
 fr1997_summary_final <- fr1997_summary_final %>% 
   mutate(Group = case_when(
     Sex == "Men" ~ "Men", 
     Sex == "Women" & (Menstruation == "3" & Age > 45) ~ "Post_menopause_women",
     Sex == "Women" & (Menstruation == "3" & Age <= 45) ~ "Women_pre_menop_no_mens",
     Sex == "Women" & (Menstruation == "1" | Menstruation == "2") ~ "Pre_menopause_women",
+    Sex == "Women" & (Menstruation == "no_period") ~ "Post_menopause_women",
     TRUE ~ "NA")) %>% 
   filter(Group != "Women_pre_menop_no_mens" & Group != "NA") %>% 
   droplevels() %>% 
   mutate(Group = ordered(Group, levels =  c("Pre_menopause_women", "Post_menopause_women", "Men"))) 
-
+ 
 #HEALTH2000:
-## We define the women's groups: 
-# h2000_summary_final <- h2000_summary_final %>% 
+# We define the women's groups and drop n/a:s:
+
+# h2000_summary_final_test1 <- h2000_summary_final %>%
 #   mutate(Group = case_when(
-#     Sex == "Men" ~ "Men", 
+#     Sex == "Men" ~ "Men",
 #     Sex == "Women" & (Menstruation == "3" & Age > 45) ~ "Post_menopause_women",
 #     Sex == "Women" & (Menstruation == "3" & Age <= 45) ~ "Women_pre_menop_no_mens",
 #     Sex == "Women" & (Menstruation == "1" | Menstruation == "2") ~ "Pre_menopause_women",
-#     TRUE ~ "NA")) %>% 
+#     TRUE ~ "NA")) %>%
+#   filter(Group != "Women_pre_menop_no_mens" & Group != "NA") %>%
+#   droplevels() %>%
+#   mutate(Group = ordered(Group, levels =  c("Pre_menopause_women", "Post_menopause_women", "Men")))
+ #no_period puuttuu, tässäkö ongelma?
+
+h2000_summary_final <- h2000_summary_final %>%
+  mutate(Group = case_when(
+    Sex == "Men" ~ "Men",
+    Sex == "Women" & (Menstruation == "3" & Age > 45) ~ "Post_menopause_women",
+    Sex == "Women" & (Menstruation == "3" & Age <= 45) ~ "Women_pre_menop_no_mens",
+    Sex == "Women" & (Menstruation == "1" | Menstruation == "2") ~ "Pre_menopause_women", 
+    Sex == "Women" & (Menstruation == "no_period") ~ "Post_menopause_women",
+    TRUE ~ "NA")) %>%
+  filter(Group != "Women_pre_menop_no_mens" & Group != "NA") %>%
+  droplevels() %>%
+  mutate(Group = ordered(Group, levels =  c("Pre_menopause_women", "Post_menopause_women", "Men")))
+# ilmeisesti joo...
+
+# h2000_summary_final <- h2000_summary_final %>% 
+#   mutate(Group = case_when(
+#     Sex == "Men" ~ "Men",
+#     Sex == "Women" & (MENOP == "1") ~ "Post_menopause_women",
+#     Sex == "Women" & (MENOP == "3") ~ "Pre_menopause_women",
+#     TRUE ~ "NA")) %>%
 #   filter(Group != "Women_pre_menop_no_mens" & Group != "NA") %>% 
 #   droplevels() %>% 
 #   mutate(Group = ordered(Group, levels =  c("Pre_menopause_women", "Post_menopause_women", "Men"))) 
-
-h2000_summary_final <- h2000_summary_final %>% 
-  mutate(Group = case_when(
-    Sex == "Men" ~ "Men",
-    Sex == "Women" & (MENOP == "1") ~ "Post_menopause_women",
-    Sex == "Women" & (MENOP == "3") ~ "Pre_menopause_women",
-    TRUE ~ "NA")) %>%
-  filter(Group != "Women_pre_menop_no_mens" & Group != "NA") %>% 
-  droplevels() %>% 
-  mutate(Group = ordered(Group, levels =  c("Pre_menopause_women", "Post_menopause_women", "Men"))) 
 
 
 
@@ -601,6 +640,24 @@ fr1997_summary_final <- fr1997_summary_final %>% mutate(DaysToPreviousFB = round
 h2000_summary_final <- h2000_summary_final %>% mutate(DaysToPreviousFB = round(runif(nrow(h2000_summary_final), min = 3*365, max = 6*365) ,0))
 ```
 
+We also need to rename observations for the menstruation variable in general population participants in order to match blood donors.
+
+```{r}
+fr1997_summary_final <- fr1997_summary_final %>% 
+  mutate(Menstruation = case_when(
+    Sex == "Women" & (Menstruation == "3") ~ "no_period",
+    Sex == "Women" & (Menstruation == "2") ~ "irregular_period",
+    Sex == "Women" & (Menstruation == "1") ~ "regular_period")) %>% 
+  mutate(Group = ordered(Menstruation, levels =  c("regular_period", "irregular_period", "no_period"))) 
+
+h2000_summary_final <- h2000_summary_final %>% 
+  mutate(Menstruation = case_when(
+    Sex == "Women" & (Menstruation == "3") ~ "no_period",
+    Sex == "Women" & (Menstruation == "2") ~ "irregular_period",
+    Sex == "Women" & (Menstruation == "1") ~ "regular_period")) %>% 
+  mutate(Group = ordered(Menstruation, levels =  c("regular_period", "irregular_period", "no_period"))) 
+```
+
 ## Remove cohort participants with missing data
 
 ### Donation history
@@ -625,7 +682,7 @@ blood_data_summary_final <- blood_data_summary_final %>%
 We remove `r cohort_name %>% filter(is.na(BMI)) %>% nrow()` participants for whom we do not have the BMI data:
  * FinDonor: 21 `r blood_data_summary_final %>% filter(is.na(BMI)) %>% nrow()`
  * FinRisk97: 8 `r fr1997_summary_final %>% filter(is.na(BMI)) %>% nrow()`
- * Health2000: 6 `r h2000_summary_final %>% filter(is.na(BMI)) %>% nrow()`
+ * Health2000: 1 `r h2000_summary_final %>% filter(is.na(BMI)) %>% nrow()`
 
 ```{r}
 #### FinDonor
@@ -654,11 +711,11 @@ h2000_summary_final <- h2000_summary_final %>%
 
 We remove `r cohort_name %>% filter(is.na(BMI)) %>% nrow()` participants for whom we do not have smoking data:
   * FinDonor: 1      `r blood_data_summary_final %>% filter(is.na(Smoking)) %>% nrow()`
-  * FinRisk97: 3086  `r fr1997_summary_final  %>% filter(is.na(Smoking)) %>% nrow()`
+  * FinRisk97: 3111  `r fr1997_summary_final  %>% filter(is.na(Smoking)) %>% nrow()`
            * `r fr1997 %>%  filter(is.na(Q69)) %>%  nrow()` = 3377/7943 -> 43 % missing
-  * Health2000: 2189 `r h2000_summary_final %>% filter(is.na(Smoking)) %>% nrow()` 
+  * Health2000: 2153 `r h2000_summary_final %>% filter(is.na(Smoking)) %>% nrow()` 
            * `r h2000 %>%  filter(is.na(FB05)) %>%  nrow()` = 2743/6264 -> 44 % missing
-  
+    
 As removing n/a:s for smoking removes >5000 general population participants as opposed to only one in the blood donor cohort, we suspect there being something wrong with the original data. Looking at the original rdata makes it clear this is not a coding error. At this point we impute the n/a:s for the general population cohorts as non-smokers, while we wait for THL to explain the missing data. 
 
 ```{r}
