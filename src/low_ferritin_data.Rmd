@@ -647,15 +647,19 @@ fr1997_summary_final <- fr1997_summary_final %>%
   mutate(Menstruation = case_when(
     Sex == "Women" & (Menstruation == "3") ~ "no_period",
     Sex == "Women" & (Menstruation == "2") ~ "irregular_period",
-    Sex == "Women" & (Menstruation == "1") ~ "regular_period")) %>% 
-  mutate(Group = ordered(Menstruation, levels =  c("regular_period", "irregular_period", "no_period"))) 
+    Sex == "Women" & (Menstruation == "1") ~ "regular_period",
+    TRUE ~ "NA")) %>% 
+  mutate(Menstruation = ordered(Menstruation, levels =  c("regular_period", "irregular_period", "no_period"))) 
 
 h2000_summary_final <- h2000_summary_final %>% 
   mutate(Menstruation = case_when(
     Sex == "Women" & (Menstruation == "3") ~ "no_period",
     Sex == "Women" & (Menstruation == "2") ~ "irregular_period",
-    Sex == "Women" & (Menstruation == "1") ~ "regular_period")) %>% 
-  mutate(Group = ordered(Menstruation, levels =  c("regular_period", "irregular_period", "no_period"))) 
+    Sex == "Women" & (Menstruation == "1") ~ "regular_period",
+    Sex == "Women" & (Age >= 55 & Group == "Post_menopause_women") ~ "no_period",
+    TRUE ~ "NA")) %>% 
+  mutate(Menstruation = ordered(Menstruation, levels =  c("regular_period", "irregular_period", "no_period"))) 
+
 ```
 
 ## Remove cohort participants with missing data
@@ -750,8 +754,8 @@ h2000_summary_final <- h2000_summary_final %>%
 
 We remove `r cohort_name %>% filter((group != "Men" & is.na(PreviousChildbirth)))%>% nrow()` female donors who did not answer the question on childbirth: 
   * FinDonor: 3 `r blood_data_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
-  * FinRisk97: 8 `r fr1997_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
-  * Health2000: 0 `r h2000_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
+  * FinRisk97: 16 `r fr1997_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
+  * Health2000: 6 `r h2000_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
 
 ```{r}
 #### FinDonor
@@ -779,11 +783,11 @@ h2000_summary_final <- h2000_summary_final %>%
 
 ### Current pregnancy
 
-Only women <45 yrs were asked whether they are currently pregnant and if so, how many weeks (source: https://www.julkari.fi/bitstream/handle/10024/78181/2005b6.pdf?sequence=1&isAllowed=y, page 56). This means a total of 1246 n/a:s for this specific question. We added a filter for age <45 years old, which leaves us with 111 missing answers. NA:s in >45-year-oldes are imputed as not pregnant. Although pregnancy is possible after this age, chances are lower. We used this age as our cut-off for menopause. 
+Only women <45 yrs were asked whether they are currently pregnant and if so, how many weeks (source: https://www.julkari.fi/bitstream/handle/10024/78181/2005b6.pdf?sequence=1&isAllowed=y, page 56). This means we have a total of 1246 n/a:s for this specific question. We added a filter for age <45 years old, which leaves us with 3 missing answers. NA:s in >45-year-oldes are imputed as not pregnant. Although pregnancy is possible after this age, chances are lower. We used this age as our cut-off for menopause. 
 
 We will now remove `r cohort_name %>% filter((Group != "Men" & is.na(CurrentPregnancy)))%>% nrow()` females who did not answer the pregnancy question: 
   * FinRisk97: 9 `r fr1997_summary_final %>% filter((Group != "Men" & is.na(CurrentPregnancy)))%>% nrow()`
-  * Health00: 111 `r h2000_summary_final %>% filter((Group != "Men" & Age <=45 & is.na(CurrentPregnancy)))%>% nrow()`
+  * Health00: 3 `r h2000_summary_final %>% filter((Group != "Men" & Age <=45 & is.na(CurrentPregnancy)))%>% nrow()`
 
 ```{r}
 # FinRisk97
@@ -832,7 +836,7 @@ blood_data_summary_final <- blood_data_summary_final %>%
 
 We remove `r cohort_name %>% filter(is.na(RedMeat)) %>% nrow()` participants for whom we do not have Smoking data:
   * Findonor: 10 `r blood_data_summary_final %>% filter(is.na(RedMeat)) %>% nrow()` 
-  * FinRisk97: 28 `r fr1997_summary_final %>% filter(is.na(RedMeat)) %>% nrow()`  
+  * FinRisk97: 30 `r fr1997_summary_final %>% filter(is.na(RedMeat)) %>% nrow()`  
 
 Health2000 participants were not asked about red meat intake.
 
@@ -896,13 +900,10 @@ h2000_summary_final <- h2000_summary_final %>%
   filter(!is.na(Age))
 ```
 
-
- Total number of cohort participants removed for missing questionnaire answers
-
 The total number removed because of missing questionnaire data is:
-`r nb_removed_blood` = 126
-`r nb_removed_fr97` = 63
-`r nb_removed_h2000` = 179
+`r nb_removed_blood` = 14
+`r nb_removed_fr97` = 9
+`r nb_removed_h2000` = 180
 
 ## Remove cohort participants who are currently pregnant
 
@@ -948,7 +949,7 @@ As decided previously, we remove data according the following criteria:
 This amounts to `r cohort_name %>% filter(BMI >= 50 | CRP >= 30 | Ferritin >= 400) %>% nrow()` participants that are removed. 
   * FinDonor: 12 `r blood_data_summary_final %>% filter(BMI >= 50 | CRP >= 30 | Ferritin >= 400) %>% nrow()`
   * FinRisk97: 216 `r fr1997_summary_final %>% filter(BMI >= 50 | CRP >= 30 | Ferritin >= 400) %>% nrow()`
-  * Health00: 137 `r h2000_summary_final %>% filter(BMI >= 50 | CRP >= 30 | Ferritin >= 400) %>% nrow()`
+  * Health00: 138 `r h2000_summary_final %>% filter(BMI >= 50 | CRP >= 30 | Ferritin >= 400) %>% nrow()`
 
 
 ```{r}
@@ -1287,7 +1288,7 @@ ggpairs(test_data_pre_women,
 ```{r}
 
 ggpairs(test_data_pre_women, 
-        columns = c("log_ferritin.x", "PreviousChildbirth",  "RedMeat_n", "Smoking", "GivenIronSupplements", "BMI"),
+        columns = c("log_ferritin.x", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI.y"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
