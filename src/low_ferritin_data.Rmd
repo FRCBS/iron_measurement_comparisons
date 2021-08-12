@@ -1140,7 +1140,7 @@ We analyzed the data with multiple linear regression. We first ran Ordinary Leas
 
 In addition, we used relative importance analysis to estimate the average proportion of variance in the outcome variable explained by each co-variate [@Groemping2006]. Relative iportance was computed using the pmvd method which assigns 0 to the relative importance of a regressor if it is non significant in the complete model. .
 
-The regressors were entered as follows in the regression models for sTfR and ferritin:
+The regressors were entered as follows in the regression models for ferritin:
 
 * Continuous variables were entered as continuous predictors
     * age, number of donations in last two years, nb of days since last donation, CRP, BMI
