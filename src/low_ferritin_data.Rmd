@@ -1667,11 +1667,4 @@ ggpairs(test_data_men_h2000,
 
 ```
 
-```{r}
-ggpairs(test_data_men, ggplot2::aes(colour = Cohort),
-        columns = c("log_ferritin", "BMI"),
-        lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
-```
 
