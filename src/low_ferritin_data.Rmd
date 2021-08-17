@@ -938,7 +938,7 @@ h2000_summary_final <- h2000_summary_final %>%
    filter(!(Group != "Men" & CurrentPregnancy == 1))
 ```
 
-## Remove donors with extreme physiological measures
+## Remove participants with extreme physiological measures
 
 As decided previously, we remove data according the following criteria:
 
@@ -1131,6 +1131,41 @@ summary_all_cohorts %>%
  
 ```
 
+
+```{r}
+ggplot(data = summary_all_cohorts,
+       mapping = aes(x = Ferritin,
+                     y = Group)) + 
+  geom_point()
+
+
+ggplot(summary_all_cohorts, aes(Ferritin, Group)) +
+  geom_point()+
+  geom_line()
+
+summary_all_cohorts %>% 
+  ggplot(aes(Ferritin, BMI,
+             colour = Cohort))+
+  geom_point(alpha = 0.5)+ 
+  facet_wrap(~Group)
+
+summary_all_cohorts %>% 
+  ggplot(aes(Group, Ferritin))+
+  geom_boxplot()+
+  geom_point(size = 0.1)+
+  facet_wrap(~Cohort)
+
+summary_all_cohorts %>% 
+  ggplot(aes(Ferritin, BMI,
+             colour = Cohort))+
+  geom_point(size = 0.1, 
+             alpha = 0.5)+
+  facet_wrap(~Group)
+  
+```
+
+
+
 # Results - Regression analysis
 
 ## Regressions on ferritin  
@@ -1150,7 +1185,7 @@ The regressors were entered as follows in the regression models for ferritin:
   
 * Ordinal variables were coded on a linear scale and entered as continuous [(Reference)](https://www3.nd.edu/~rwilliam/stats3/OrdinalIndependent.pdf)
     * Iron supplementation 
-    * All dietary intake
+    * Meat intake
   
 We compute both coefficients and standardized coefficients (with all dependent and independent variables standardized) for robust regression and only coefficients for OLS regression. We present robust coefficients and their bootstrapped BCa 95% confidence intervals in Table 1 (ferritin) and  Table 2 (sTfR), robust standardized coefficients, their bootstrapped distribution and BCa 95% confidence intervals in Figure 2.A and non-standardized OLS regression coefficients in Supplementary Table 1 (Ferritin) and 2 (sTfR). 
 
@@ -1175,7 +1210,6 @@ Data transformations:
 
 * Log transformed variables: 
     * Ferritin
-    * sTfR
     * CRP 
   
 * Age is divided by 5 to simplify coefficient interpretation
@@ -1195,53 +1229,37 @@ We center all variables entered as continuous.
 
 
 ```{r}
-# Center variables
-
-# test_data_pre_women <- regression_cohorts %>% 
-#   filter(Group == "Pre_menopause_women") %>% 
-#   dplyr::select(ID, RedMeat_n) %>% 
-#   gather(key = key, value = value, -ID) %>% 
-#   group_by(key) %>% 
-#   mutate(value = scale(value, scale = FALSE)[,1]) %>% 
-#   spread(key = key, value = value)
-# ei ehkä tarvita tätä kohtaa 
 
 test_data_pre_women <- regression_cohorts %>% 
-  select(ID, Smoking, Sex, Ferritin, Hb)  
-         #luokkamuuttujat mitä ei transformoida tähän kohtaan
+  filter(Group == "Pre_menopause_women")
 
-test_data_pre_women <- regression_cohorts %>% 
-  filter(Group == "Pre_menopause_women") %>% 
+test_data_pre_women %>% 
   dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
   mutate(Age = scale(Age, scale = FALSE)[,1],
          log_CRP = scale(log_CRP, scale = FALSE)[,1],
          donation_count = scale(donation_count, scale = FALSE)[,1],
          log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
          BMI = scale(BMI, scale = FALSE)[,1],
-         donation_count_2 = donation_count^2) %>% 
-  full_join(test_data_pre_women, by = "ID")  %>% 
-  dplyr::select(-ID)
+         donation_count_2 = donation_count^2) 
+
 
 ```
 
 ## Postmenopausal women
 
 ```{r}
-test_data_post_women <- regression_cohorts %>% 
-  select(ID, Smoking, Sex, Ferritin, Hb)  
-         #luokkamuuttujat mitä ei transformoida tähän kohtaan
 
 test_data_post_women <- regression_cohorts %>% 
-  filter(Group == "Post_menopause_women") %>% 
+  filter(Group == "Post_menopause_women") 
+
+test_data_post_women %>% 
   dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
   mutate(Age = scale(Age, scale = FALSE)[,1],
          log_CRP = scale(log_CRP, scale = FALSE)[,1],
          donation_count = scale(donation_count, scale = FALSE)[,1],
          log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
          BMI = scale(BMI, scale = FALSE)[,1],
-         donation_count_2 = donation_count^2) %>% 
-  full_join(test_data_post_women, by = "ID")  %>% 
-  dplyr::select(-ID)
+         donation_count_2 = donation_count^2)
 
 ```
 
@@ -1250,21 +1268,19 @@ test_data_post_women <- regression_cohorts %>%
 
 
 ```{r}
-test_data_men <- regression_cohorts %>% 
-  select(ID, Smoking, Sex, Ferritin, Hb)  
-         #luokkamuuttujat mitä ei transformoida tähän kohtaan
 
 test_data_men <- regression_cohorts %>% 
-  filter(Group == "Men") %>% 
+  filter(Group == "Men") 
+
+test_data_men %>% 
   dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
   mutate(Age = scale(Age, scale = FALSE)[,1],
          log_CRP = scale(log_CRP, scale = FALSE)[,1],
          donation_count = scale(donation_count, scale = FALSE)[,1],
          log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
          BMI = scale(BMI, scale = FALSE)[,1],
-         donation_count_2 = donation_count^2) %>% 
-  full_join(test_data_men, by = "ID")  %>% 
-  dplyr::select(-ID)
+         donation_count_2 = donation_count^2) 
+
 
 ```
 
@@ -1275,137 +1291,387 @@ test_data_men <- regression_cohorts %>%
 #### Correlograms
 
 ```{r}
-
+# Premenopausal women
 ggpairs(test_data_pre_women, 
-        columns = c("log_ferritin.x", "Age.x", "log_CRP.x",  "donation_count.x", "donation_count_2.x",
-                    "log_last_donation.x"),
+        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+                    "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
+
+# Postmenopausal women
+ggpairs(test_data_post_women, 
+        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+                    "log_last_donation"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+
+# Men
+ggpairs(test_data_men, 
+        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+                    "log_last_donation"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+
+
 
 ```
 
 ```{r}
+#same as above, cohorts separated 
 
-ggpairs(test_data_pre_women, 
-        columns = c("log_ferritin.x", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI.y"),
+# Premenopausal women
+ggpairs(test_data_pre_women, ggplot2::aes(colour = Cohort, alpha = 0.5),
+        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+                    "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
+        progress = FALSE) + 
+  ggtitle("Premenopausal women")
+
+# Postmenopausal women
+ggpairs(test_data_post_women, ggplot2::aes(colour = Cohort, alpha = 0.5),
+        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+                    "log_last_donation"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE) +
+  ggtitle("Postmenopausal women")
+
+# Men
+ggpairs(test_data_men, ggplot2::aes(colour = Cohort, alpha = 0.5),
+        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+                    "log_last_donation"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE) + 
+ggtitle("Men")
+
 ```
 
-
-# Correlogram for age
 
 ```{r}
 
-ggpairs(test_data_pre_women, 
-        columns = c("log_ferritin.x", "Age.y"),
+ggpairs(test_data_pre_women, ggplot2::aes(colour = Cohort, alpha = 0.5),
+        columns = c("log_ferritin", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
+        progress = FALSE) + 
+ggtitle("Premenopausal women")
+
+ggpairs(test_data_post_women, ggplot2::aes(colour = Cohort, alpha = 0.5), 
+        columns = c("log_ferritin", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)+ 
+ggtitle("Postmenopausal women")
+
+ggpairs(test_data_men, ggplot2::aes(colour = Cohort, alpha = 0.5),
+        columns = c("log_ferritin",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE) + 
+ggtitle("Men")
+
 ```
 
-# correlogram log CRP 
+
+#### Correlograms by cohort
+
+##### Premenopausal women 
+
+###### FinDonor
 
 ```{r}
+test_data_pre_women_findonor <- regression_cohorts %>% 
+  filter(Group == "Pre_menopause_women" & Cohort == "FINDONOR") 
 
-ggpairs(test_data_pre_women, 
-        columns = c("log_ferritin.x", "log_CRP.x"),
+test_data_pre_women_findonor %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2)
+
+ggpairs(test_data_pre_women_findonor, 
+        columns = c("log_ferritin", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
+
+ggpairs(test_data_pre_women_findonor, 
+        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+                    "log_last_donation"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+
+
 ```
 
-# correlogram donation count 
+###### FinRisk97
 
 ```{r}
+test_data_pre_women_fr1997 <- regression_cohorts %>% 
+  filter(Group == "Pre_menopause_women" & Cohort == "FINRISK97") 
 
-ggpairs(test_data_pre_women, 
-        columns = c("log_ferritin.x", "donation_count.x"),
+test_data_pre_women_fr1997 %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2)
+
+ggpairs(test_data_pre_women_fr1997, 
+        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+                    "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
+
+ggpairs(test_data_pre_women_fr1997, 
+        columns = c("log_ferritin", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+
+
 ```
 
-# correlogram donation count 2 
+###### Health2000
 
 ```{r}
+test_data_pre_women_h2000 <- regression_cohorts %>% 
+  filter(Group == "Pre_menopause_women" & Cohort == "HEALTH00") 
 
-ggpairs(test_data_pre_women, 
-        columns = c("log_ferritin.x", "donation_count_2.x"),
+test_data_pre_women_h2000 %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2)
+
+ggpairs(test_data_pre_women_h2000, 
+        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+                    "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
+
+ggpairs(test_data_pre_women_h2000, 
+        columns = c("log_ferritin", "PreviousChildbirth", "Smoking", "iron_complience", "BMI"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+
+
 ```
 
-# correlogram log last donation
+
+
+##### Postmenopausal women 
+
+###### FinDonor
 
 ```{r}
+test_data_post_women_findonor <- regression_cohorts %>% 
+  filter(Group == "Post_menopause_women" & Cohort == "FINDONOR") 
 
-ggpairs(test_data_pre_women, 
-        columns = c("log_ferritin.x", "log_last_donation.x"),
+test_data_post_women_findonor %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2)
+
+ggpairs(test_data_post_women_findonor, 
+        columns = c("log_ferritin", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
+
+ggpairs(test_data_post_women_findonor, 
+        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+                    "log_last_donation"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+
+
 ```
 
-# correlogram pregnancy (QR83=have you given birth? yes/no)
+###### FinRisk97
 
 ```{r}
+test_data_post_women_fr1997 <- regression_cohorts %>% 
+  filter(Group == "Post_menopause_women" & Cohort == "FINRISK97") 
 
-ggpairs(test_data_pre_women, 
-        columns = c("log_ferritin.x", "PreviousChildbirth"),
+test_data_post_women_fr1997 %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2)
+
+ggpairs(test_data_post_women_fr1997, 
+        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+                    "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
+
+ggpairs(test_data_post_women_fr1997, 
+        columns = c("log_ferritin", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+
+
 ```
 
-# correlogram red meat
+###### Health2000
 
 ```{r}
+test_data_post_women_h2000 <- regression_cohorts %>% 
+  filter(Group == "Post_menopause_women" & Cohort == "HEALTH00") 
 
-ggpairs(test_data_pre_women, 
-        columns = c("log_ferritin.x", "RedMeat_n"),
+test_data_post_women_h2000 %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2)
+
+ggpairs(test_data_post_women_h2000, 
+        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+                    "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
+
+ggpairs(test_data_post_women_h2000, 
+        columns = c("log_ferritin", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+
+
 ```
 
-# correlogram smoking 
+##### Men 
+
+###### FinDonor
 
 ```{r}
+test_data_men_findonor <- regression_cohorts %>% 
+  filter(Group == "Men" & Cohort == "FINDONOR") 
 
-ggpairs(test_data_pre_women, 
-        columns = c("log_ferritin.x", "Smoking"),
+test_data_men_findonor %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2)
+
+ggpairs(test_data_men_findonor, 
+        columns = c("log_ferritin", "RedMeat_n", "Smoking", "iron_complience", "BMI"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
+
+ggpairs(test_data_men_findonor, 
+        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+                    "log_last_donation"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+
+
 ```
 
-# correlogram iron supplements 
+###### FinRisk97
 
 ```{r}
+test_data_men_fr1997 <- regression_cohorts %>% 
+  filter(Group == "Men" & Cohort == "FINRISK97") 
 
-ggpairs(test_data_pre_women, 
-        columns = c("log_ferritin.x", "GivenIronSupplements"),
+test_data_men_fr1997 %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2)
+
+ggpairs(test_data_men_fr1997, 
+        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+                    "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
+
+ggpairs(test_data_men_fr1997, 
+        columns = c("log_ferritin",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+
+
 ```
 
-# correlogram BMI
+###### Health2000
 
 ```{r}
+test_data_men_h2000 <- regression_cohorts %>% 
+  filter(Group == "Men" & Cohort == "HEALTH00") 
 
-ggpairs(test_data_pre_women, 
-        columns = c("log_ferritin.x", "BMI"),
+test_data_men_h2000 %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2)
+
+ggpairs(test_data_men_h2000, 
+        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+                    "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
+
+ggpairs(test_data_men_h2000, 
+        columns = c("log_ferritin", "Smoking", "iron_complience", "BMI"),
+         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+
+
 ```
 
-
-
-
+```{r}
+ggpairs(test_data_men, ggplot2::aes(colour = Cohort),
+        columns = c("log_ferritin", "BMI"),
+        lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
+                      combo = wrap("facethist", binwidth = 0.5)),
+        progress = FALSE)
+```
 
