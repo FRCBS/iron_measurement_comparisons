@@ -6,19 +6,15 @@ output: github_document
 bibliography: index.bib
 ---
 
-Based on the original code written by Muriel Lobier and Mikko Arvas (https://github.com/FRCBS/iron_levels_of_blood_donors/blob/master/src/index.Rmd and https://github.com/FRCBS/changes_in_donor_health/blob/master/src/explorative_analysis.Rmd)
+Based on Muriel Lobier's original code (https://github.com/FRCBS/iron_levels_of_blood_donors/blob/master/src/index.Rmd)
 
 # Summary
 
-This document includes all codes necessary to run the analysis of and produce the figures for the three Finnish Cohorts (FinDonor, FINRISK97, Health2000). The code allows the user to:
-
-- describe the cohorts and compute the prevalence of iron deficiency
-- identify co-variants of iron deficiency using multivariable linear regression 
+This document includes all codes necessary to run the analysis of and produce the figures for the three Finnish Cohorts (FinDonor, FINRISK97, Health2000). The code allows the user to describe the cohorts and build a summary table that can be used in further regression analysis.
 
 ```{r setup, , message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
-# library(janitor)
 library(tableone)
 library(stargazer)
 library(gridExtra)
@@ -26,24 +22,13 @@ library(cowplot)
 library(broom)
 library(GGally)
 library(ggfortify)
-# library(sjPlot)
 library(knitr)
 library(lubridate)
-#library(HDInterval) !! package ‘HDIinterval’ is not available (for R version 3.6.3)!!!
 library(car)
-#library(relaimpo)
 library(sfsmisc)
 library(MASS)
-# library(kableExtra)
-#library(brms)
-#library(rstan)
-#library(rms)
-#library(modelr)
-#library(tidybayes)
 library(ordinal)
 library(sjmisc)
-#library(sjlabelled)
-# library(lazerhawk)
 library(epiDisplay)
 library(safeBinaryRegression)
 library(epitools)
@@ -89,11 +74,11 @@ fr1997$Cohort <- c("FINRISK97")
 h2000$Cohort <- c("HEALTH00")
 ```
 
-There are `r cohort_name %>% distinct(ID_variable) %>% nrow()` individials enrolled in the studies. 
+There are "cohort_name %>% distinct(ID_variable) %>% nrow()" individials enrolled in the studies. 
 
-  * FinDonor: 2584   `r indiv_donations_data %>% distinct(donor) %>% nrow()`
-  * FinRisk97: 7943  `r fr1997 %>% distinct(RELEASE_ID) %>% nrow()`
-  * Health2000: 6264 `r h2000 %>% distinct(RELEASE_ID) %>% nrow()` 
+  * FinDonor: 2584   indiv_donations_data %>% distinct(donor) %>% nrow()
+  * FinRisk97: 7943  fr1997 %>% distinct(RELEASE_ID) %>% nrow()
+  * Health2000: 6264 h2000 %>% distinct(RELEASE_ID) %>% nrow()
         
 Once we remove participants that have no ferritin or no Hb measurement data (and for blood donors for any donation event) there are `r cohort_name %>%  filter(!is.na(Ferritin) & !is.na(Hb_v) ) %>% distinct(ID_variable) %>% nrow()` participants left  
 
@@ -394,28 +379,6 @@ older_h2000 <- filter(h2000_summary,
 h2000_summary <- h2000_summary %>%
   mutate(Menstruation = ifelse(ID %in% older_h2000, "no_period", as.character(Menstruation)))
 
-# h2000_mens_missing <- h2000_summary 
-# 
-# # renaming the menstruation variable
-# h2000_mens_missing <- h2000_mens_missing %>% 
-#   mutate(Menstruation = case_when(
-#     Menstruation == "1" ~ "regular",
-#     Menstruation == "2" ~ "irregular",
-#     Menstruation == "3" ~ "no"
-#   )) %>% 
-#   filter(Sex == "Women") 
-# 
-# women_older_than_55 <- filter(h2000_mens_missing,
-#                               Age >= 55 & is.na(Menstruation))$ID
-# 
-# women_older_than <- h2000_mens_missing %>% 
-#   mutate(MENSTRUATION = ifelse(ID %in% women_older_than_55, "no", as.character(MENSTRUATION))) 
-# 
-# older_h2000 <- filter(h2000_summary,
-#                       Sex == "Women" & is.na(MENOP) & Age > 55)$ID
-# h2000_summary <- h2000_summary %>% 
-#   mutate(Menstruation = ifelse(ID %in% older_h2000, "no_period", as.character(MENOP)))
-
 ```
 
 
@@ -504,32 +467,6 @@ h2000_n_women_removed <- h2000_summary_final %>%
   group_by(Group) %>%
   filter(Group ==  "Women_pre_menop_no_mens") %>%
   nrow()
-# 
-# 
-# h2000_nb_women_no_menstruation_response <- h2000_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>% nrow()
-# h2000_nb_women_no_menstruation_response <- h2000_summary %>% filter(Sex == "Women" & is.na(MENOP)) %>% nrow()
-# h2000_summary %>% filter(MENOP == "2") %>% nrow() # 103 perimenopausal women 
-# 
-# 
-# ## remove female Health2000 participants with no MENOP response and perimenopausal women
-# h2000_summary_final <- h2000_summary %>% 
-#   mutate(mens_ok_h2000 = case_when(
-#     Sex == "Men" ~ "Men", 
-#     Sex == "Women" & !is.na(MENOP)  ~ "Women",
-#     TRUE ~ "NA")) %>% 
-#   filter(mens_ok_h2000 != "NA") 
-#   #%>% filter("Women" & MENOP != "2")
-# 
-# ## We define the women's groups:
-# h2000_n_women_removed <- h2000_summary_final %>%
-#   mutate(Group = case_when(
-#     Sex == "Men" ~ "Men",
-#     Sex == "Women" & (MENOP == "1") ~ "Post_menopause_women",
-#     Sex == "Women" & (MENOP == "3") ~ "Pre_menopause_women",
-#     TRUE ~ "NA")) %>%
-#   group_by(Group) %>%
-#   filter(Group ==  "Women_pre_menop_no_mens") %>%
-#   nrow()
 
 ```
 
@@ -572,19 +509,6 @@ fr1997_summary_final <- fr1997_summary_final %>%
   mutate(Group = ordered(Group, levels =  c("Pre_menopause_women", "Post_menopause_women", "Men"))) 
  
 #HEALTH2000:
-# We define the women's groups and drop n/a:s:
-
-# h2000_summary_final_test1 <- h2000_summary_final %>%
-#   mutate(Group = case_when(
-#     Sex == "Men" ~ "Men",
-#     Sex == "Women" & (Menstruation == "3" & Age > 45) ~ "Post_menopause_women",
-#     Sex == "Women" & (Menstruation == "3" & Age <= 45) ~ "Women_pre_menop_no_mens",
-#     Sex == "Women" & (Menstruation == "1" | Menstruation == "2") ~ "Pre_menopause_women",
-#     TRUE ~ "NA")) %>%
-#   filter(Group != "Women_pre_menop_no_mens" & Group != "NA") %>%
-#   droplevels() %>%
-#   mutate(Group = ordered(Group, levels =  c("Pre_menopause_women", "Post_menopause_women", "Men")))
- #no_period puuttuu, tässäkö ongelma?
 
 h2000_summary_final <- h2000_summary_final %>%
   mutate(Group = case_when(
@@ -597,19 +521,6 @@ h2000_summary_final <- h2000_summary_final %>%
   filter(Group != "Women_pre_menop_no_mens" & Group != "NA") %>%
   droplevels() %>%
   mutate(Group = ordered(Group, levels =  c("Pre_menopause_women", "Post_menopause_women", "Men")))
-# ilmeisesti joo...
-
-# h2000_summary_final <- h2000_summary_final %>% 
-#   mutate(Group = case_when(
-#     Sex == "Men" ~ "Men",
-#     Sex == "Women" & (MENOP == "1") ~ "Post_menopause_women",
-#     Sex == "Women" & (MENOP == "3") ~ "Pre_menopause_women",
-#     TRUE ~ "NA")) %>%
-#   filter(Group != "Women_pre_menop_no_mens" & Group != "NA") %>% 
-#   droplevels() %>% 
-#   mutate(Group = ordered(Group, levels =  c("Pre_menopause_women", "Post_menopause_women", "Men"))) 
-
-
 
 ```
 
@@ -1132,66 +1043,9 @@ summary_all_cohorts %>%
 ```
 
 
-```{r}
-ggplot(data = summary_all_cohorts,
-       mapping = aes(x = Ferritin,
-                     y = Group)) + 
-  geom_point()
+# Results - Regression table
 
-
-ggplot(summary_all_cohorts, aes(Ferritin, Group)) +
-  geom_point()+
-  geom_line()
-
-summary_all_cohorts %>% 
-  ggplot(aes(Ferritin, BMI,
-             colour = Cohort))+
-  geom_point(alpha = 0.5)+ 
-  facet_wrap(~Group)
-
-summary_all_cohorts %>% 
-  ggplot(aes(Group, Ferritin))+
-  geom_boxplot()+
-  geom_point(size = 0.1)+
-  facet_wrap(~Cohort)
-
-summary_all_cohorts %>% 
-  ggplot(aes(Ferritin, BMI,
-             colour = Cohort))+
-  geom_point(size = 0.1, 
-             alpha = 0.5)+
-  facet_wrap(~Group)
-  
-```
-
-
-
-# Results - Regression analysis
-
-## Regressions on ferritin  
-
-We analyzed the data with multiple linear regression. We first ran Ordinary Least Square (OLS) regressions and their diagnostics. If the diagnostics identified problematic observations (e.g., outliers, influential observations), we also ran robust regression regressions [@yu2017robust]. Robust regression is based on less assumptions than OLS regression and is less sensitive to influential observations. It  gives more accurate estimates of regression coefficients in the presence of problematic observations. Using robust regression leads to a more principled approach to regression analysis and avoids potential confounds introduced by selective removal of influential observations. As the rlm command from the MASS package does not compute directly the *t* and *p* values, we used the f.robftest function from the sfsmisc package. Practical examples of using robust regression can be found in the literature [@davison2017platelet].  
-
-
-In addition, we used relative importance analysis to estimate the average proportion of variance in the outcome variable explained by each co-variate [@Groemping2006]. Relative iportance was computed using the pmvd method which assigns 0 to the relative importance of a regressor if it is non significant in the complete model. .
-
-The regressors were entered as follows in the regression models for ferritin:
-
-* Continuous variables were entered as continuous predictors
-    * age, number of donations in last two years, nb of days since last donation, CRP, BMI
-  
-* Binary variables were entered as categorical (but coded as numerical for relative importance):
-    * Smoking, pregnancy
-  
-* Ordinal variables were coded on a linear scale and entered as continuous [(Reference)](https://www3.nd.edu/~rwilliam/stats3/OrdinalIndependent.pdf)
-    * Iron supplementation 
-    * Meat intake
-  
-We compute both coefficients and standardized coefficients (with all dependent and independent variables standardized) for robust regression and only coefficients for OLS regression. We present robust coefficients and their bootstrapped BCa 95% confidence intervals in Table 1 (ferritin) and  Table 2 (sTfR), robust standardized coefficients, their bootstrapped distribution and BCa 95% confidence intervals in Figure 2.A and non-standardized OLS regression coefficients in Supplementary Table 1 (Ferritin) and 2 (sTfR). 
-
-## Pre-processing
-
-### Rename and transform
+## Rename and transform
 
 ```{r}
 regression_cohorts <- summary_all_cohorts %>% 
@@ -1202,9 +1056,16 @@ regression_cohorts <- summary_all_cohorts %>%
             donation_count_2 = donation_count^2,
             log_ferritin = log(Ferritin),
             log_last_donation = log(last_donation)/log(2),
-            log_CRP = log(CRP)) 
-
+            log_CRP = log(CRP),
+            iron_deficiency = Ferritin < 15) 
 ```
+
+Save table
+
+```{r}
+write.table(regression_cohorts, file = paste0("../results/regressioncohorts",gsub("-","",as.Date(Sys.time())),".txt"))
+```
+
 
 Data transformations:
 
@@ -1245,6 +1106,13 @@ test_data_pre_women %>%
 
 ```
 
+Save table
+
+```{r}
+write.table(test_data_pre_women, file = paste0("../results/test_data_pre_women",gsub("-","",as.Date(Sys.time())),".txt"))
+```
+
+
 ## Postmenopausal women
 
 ```{r}
@@ -1261,6 +1129,12 @@ test_data_post_women %>%
          BMI = scale(BMI, scale = FALSE)[,1],
          donation_count_2 = donation_count^2)
 
+```
+
+Save table
+
+```{r}
+write.table(test_data_post_women, file = paste0("../results/test_data_post_women",gsub("-","",as.Date(Sys.time())),".txt"))
 ```
 
 
@@ -1284,16 +1158,21 @@ test_data_men %>%
 
 ```
 
+Save table
+
+```{r}
+write.table(test_data_men, file = paste0("../results/test_data_men",gsub("-","",as.Date(Sys.time())),".txt"))
+```
 
 
-### Mutiple regression - ferritin as outcome
+## Mutiple regression - ferritin as outcome
 
-#### Correlograms
+### Correlograms
 
 ```{r}
 # Premenopausal women
 ggpairs(test_data_pre_women, 
-        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
                     "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
@@ -1301,7 +1180,7 @@ ggpairs(test_data_pre_women,
 
 # Postmenopausal women
 ggpairs(test_data_post_women, 
-        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
                     "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
@@ -1309,7 +1188,7 @@ ggpairs(test_data_post_women,
 
 # Men
 ggpairs(test_data_men, 
-        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
                     "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
@@ -1324,7 +1203,7 @@ ggpairs(test_data_men,
 
 # Premenopausal women
 ggpairs(test_data_pre_women, ggplot2::aes(colour = Cohort, alpha = 0.5),
-        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
                     "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
@@ -1333,7 +1212,7 @@ ggpairs(test_data_pre_women, ggplot2::aes(colour = Cohort, alpha = 0.5),
 
 # Postmenopausal women
 ggpairs(test_data_post_women, ggplot2::aes(colour = Cohort, alpha = 0.5),
-        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
                     "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
@@ -1342,7 +1221,7 @@ ggpairs(test_data_post_women, ggplot2::aes(colour = Cohort, alpha = 0.5),
 
 # Men
 ggpairs(test_data_men, ggplot2::aes(colour = Cohort, alpha = 0.5),
-        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
                     "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
@@ -1355,21 +1234,21 @@ ggtitle("Men")
 ```{r}
 
 ggpairs(test_data_pre_women, ggplot2::aes(colour = Cohort, alpha = 0.5),
-        columns = c("log_ferritin", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
+        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE) + 
 ggtitle("Premenopausal women")
 
 ggpairs(test_data_post_women, ggplot2::aes(colour = Cohort, alpha = 0.5), 
-        columns = c("log_ferritin", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
+        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)+ 
 ggtitle("Postmenopausal women")
 
 ggpairs(test_data_men, ggplot2::aes(colour = Cohort, alpha = 0.5),
-        columns = c("log_ferritin",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
+        columns = c("log_ferritin", "iron_deficiency",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE) + 
@@ -1398,13 +1277,13 @@ test_data_pre_women_findonor %>%
          donation_count_2 = donation_count^2)
 
 ggpairs(test_data_pre_women_findonor, 
-        columns = c("log_ferritin", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
+        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
 
 ggpairs(test_data_pre_women_findonor, 
-        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
                     "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
@@ -1429,14 +1308,14 @@ test_data_pre_women_fr1997 %>%
          donation_count_2 = donation_count^2)
 
 ggpairs(test_data_pre_women_fr1997, 
-        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
                     "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
 
 ggpairs(test_data_pre_women_fr1997, 
-        columns = c("log_ferritin", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
+        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
@@ -1460,14 +1339,14 @@ test_data_pre_women_h2000 %>%
          donation_count_2 = donation_count^2)
 
 ggpairs(test_data_pre_women_h2000, 
-        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
                     "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
 
 ggpairs(test_data_pre_women_h2000, 
-        columns = c("log_ferritin", "PreviousChildbirth", "Smoking", "iron_complience", "BMI"),
+        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth", "Smoking", "iron_complience", "BMI"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
@@ -1495,13 +1374,13 @@ test_data_post_women_findonor %>%
          donation_count_2 = donation_count^2)
 
 ggpairs(test_data_post_women_findonor, 
-        columns = c("log_ferritin", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
+        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
 
 ggpairs(test_data_post_women_findonor, 
-        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
                     "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
@@ -1526,14 +1405,14 @@ test_data_post_women_fr1997 %>%
          donation_count_2 = donation_count^2)
 
 ggpairs(test_data_post_women_fr1997, 
-        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
                     "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
 
 ggpairs(test_data_post_women_fr1997, 
-        columns = c("log_ferritin", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
+        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
@@ -1557,14 +1436,14 @@ test_data_post_women_h2000 %>%
          donation_count_2 = donation_count^2)
 
 ggpairs(test_data_post_women_h2000, 
-        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
                     "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
 
 ggpairs(test_data_post_women_h2000, 
-        columns = c("log_ferritin", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
+        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
@@ -1590,13 +1469,13 @@ test_data_men_findonor %>%
          donation_count_2 = donation_count^2)
 
 ggpairs(test_data_men_findonor, 
-        columns = c("log_ferritin", "RedMeat_n", "Smoking", "iron_complience", "BMI"),
+        columns = c("log_ferritin", "iron_deficiency", "RedMeat_n", "Smoking", "iron_complience", "BMI"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
 
 ggpairs(test_data_men_findonor, 
-        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
                     "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
@@ -1621,14 +1500,14 @@ test_data_men_fr1997 %>%
          donation_count_2 = donation_count^2)
 
 ggpairs(test_data_men_fr1997, 
-        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
                     "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
 
 ggpairs(test_data_men_fr1997, 
-        columns = c("log_ferritin",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
+        columns = c("log_ferritin", "iron_deficiency",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
@@ -1652,14 +1531,14 @@ test_data_men_h2000 %>%
          donation_count_2 = donation_count^2)
 
 ggpairs(test_data_men_h2000, 
-        columns = c("log_ferritin", "Age", "log_CRP",  "donation_count", "donation_count_2",
+        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
                     "log_last_donation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
 
 ggpairs(test_data_men_h2000, 
-        columns = c("log_ferritin", "Smoking", "iron_complience", "BMI"),
+        columns = c("log_ferritin", "iron_deficiency", "Smoking", "iron_complience", "BMI"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
@@ -1667,4 +1546,7 @@ ggpairs(test_data_men_h2000,
 
 ```
 
+```{r}
+rmarkdown::render("low_ferritin_data.Rmd")
+```
 
