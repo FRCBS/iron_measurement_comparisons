@@ -1,9 +1,8 @@
 ---
-title: "Low ferritin model"
+title: "Low ferritin data"
 author: "Sofie Ekroos"
 date: "19.7.2021"
 output: github_document
-bibliography: index.bib
 ---
 
 Based on Muriel Lobier's original code (https://github.com/FRCBS/iron_levels_of_blood_donors/blob/master/src/index.Rmd)
@@ -74,7 +73,7 @@ fr1997$Cohort <- c("FINRISK97")
 h2000$Cohort <- c("HEALTH00")
 ```
 
-There are "cohort_name %>% distinct(ID_variable) %>% nrow()" individials enrolled in the studies. 
+There are "cohort %>% distinct(ID_variable) %>% nrow()" individials enrolled in the studies. 
 
   * FinDonor: 2584   indiv_donations_data %>% distinct(donor) %>% nrow()
   * FinRisk97: 7943  fr1997 %>% distinct(RELEASE_ID) %>% nrow()
@@ -862,10 +861,9 @@ This amounts to `r cohort_name %>% filter(BMI >= 50 | CRP >= 30 | Ferritin >= 40
   * FinRisk97: 216 `r fr1997_summary_final %>% filter(BMI >= 50 | CRP >= 30 | Ferritin >= 400) %>% nrow()`
   * Health00: 138 `r h2000_summary_final %>% filter(BMI >= 50 | CRP >= 30 | Ferritin >= 400) %>% nrow()`
 
-
 ```{r}
 # FinDonor
-blood_data_summary_final <- blood_data_summary_final %>% 
+fr1997_summary_final <- fr1997_summary_final %>% 
    filter(BMI < 50 & CRP < 30 & Ferritin < 400)
 
 # FinRisk97
@@ -1064,6 +1062,8 @@ Save table
 
 ```{r}
 write.table(regression_cohorts, file = paste0("../results/regressioncohorts",gsub("-","",as.Date(Sys.time())),".txt"))
+
+save(regression_cohorts, file = "../data/ID_data_regression_cohorts.rdata")
 ```
 
 
@@ -1545,8 +1545,3 @@ ggpairs(test_data_men_h2000,
 
 
 ```
-
-```{r}
-rmarkdown::render("low_ferritin_data.Rmd")
-```
-
