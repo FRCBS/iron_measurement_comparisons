@@ -51,7 +51,148 @@ Load data
 
 ```{r}
 load("../data/ID_data_regression_cohorts.rdata")
+all_cohorts <- regression_cohorts
 ```
+
+## Percentage of ID, all cohorts
+
+Here we check the prevalence of iron deficiency in the cohorts 
+
+```{r}
+# Percentage of ID, all cohorts 
+all_cohorts %>%
+  dplyr::select(Group, iron_deficiency) %>% 
+  group_by(Group, iron_deficiency) %>% 
+  count() %>% 
+  group_by(Group) %>% 
+  summarise(
+    ID = iron_deficiency,
+    n=n,
+    Percentage = round(n/sum(n),2)
+  )
+
+# Percentage of ID, FinDonor  
+all_cohorts %>%
+  filter(Cohort == "FINDONOR") %>% 
+  dplyr::select(Group, iron_deficiency) %>% 
+  group_by(Group, iron_deficiency) %>% 
+  count() %>% 
+  group_by(Group) %>% 
+  summarise(
+    ID = iron_deficiency,
+    n=n,
+    Percentage = round(n/sum(n),2)
+  )
+
+# percentage of ID, FinRisk97
+all_cohorts %>%
+  filter(Cohort == "FINRISK97") %>% 
+  dplyr::select(Group, iron_deficiency) %>% 
+  group_by(Group, iron_deficiency) %>% 
+  count() %>% 
+  group_by(Group) %>% 
+  summarise(
+    ID = iron_deficiency,
+    n=n,
+    Percentage = round(n/sum(n),2)
+  )
+
+# percentage of ID, Health2000
+all_cohorts %>%
+  filter(Cohort == "HEALTH00") %>% 
+  dplyr::select(Group, iron_deficiency) %>% 
+  group_by(Group, iron_deficiency) %>% 
+  count() %>% 
+  group_by(Group) %>% 
+  summarise(
+    ID = iron_deficiency,
+    n=n,
+    Percentage = round(n/sum(n),2)
+  )
+```
+
+## Percantage of menstruation, all cohorts 
+
+We are interested to see if menstruation could be used as a variable in premenopausal women. In case the number of premenopausal women reporting they don't have periods is too small, we should not use it.  
+
+CHECK THE FINRISKI BOOK - IS THIS ACCURATE?
+
+```{r}
+# recode irregular and regular periods to "yes"
+all_cohorts_period_test <- all_cohorts %>% 
+  mutate(Menstruation = case_when(
+    Menstruation == "irregular_period" ~ "yes",
+    Menstruation == "regular_period" ~ "yes",
+    Menstruation == "no_period" ~ "no",
+    Sex == "Men" & is.na(Menstruation) ~ "no")) %>%
+  mutate(Menstruation = ordered(Menstruation, levels =
+    c("yes", "no")))
+
+all_cohorts_period_test %>% 
+  filter(Group == "Pre_menopause_women") %>% 
+  filter(Menstruation == "no") %>% 
+  nrow()
+## hmmm, 0 women have no periods... don't think thia is true, something wrong with the earlier code?
+
+all_cohorts %>% 
+  filter(Group == "Pre_menopause_women") %>% 
+  filter(Menstruation == "no_period") %>% 
+  nrow()
+## still 0...
+
+# Percentage of ID, all cohorts 
+all_cohorts %>%
+  dplyr::select(Group, Menstruation) %>% 
+  group_by(Group, Menstruation) %>% 
+  count() %>% 
+  group_by(Group) %>% 
+  summarise(
+    Menstruation = Menstruation,
+    n=n,
+    Percentage = round(n/sum(n),2)
+  )
+
+# Percentage of ID, FinDonor  
+all_cohorts %>%
+  filter(Cohort == "FINDONOR") %>% 
+  dplyr::select(Group, Menstruation) %>% 
+  group_by(Group, Menstruation) %>% 
+  count() %>% 
+  group_by(Group) %>% 
+  summarise(
+    Menstruation = Menstruation,
+    n=n,
+    Percentage = round(n/sum(n),2)
+  )
+
+# percentage of ID, FinRisk97
+all_cohorts %>%
+  filter(Cohort == "FINRISK97") %>% 
+    dplyr::select(Group, Menstruation) %>% 
+  group_by(Group, Menstruation) %>% 
+  count() %>% 
+  group_by(Group) %>% 
+  summarise(
+    Menstruation = Menstruation,
+    n=n,
+    Percentage = round(n/sum(n),2)
+  )
+
+# percentage of ID, Health2000
+all_cohorts %>%
+  filter(Cohort == "HEALTH00") %>% 
+    dplyr::select(Group, Menstruation) %>% 
+  group_by(Group, Menstruation) %>% 
+  count() %>% 
+  group_by(Group) %>% 
+  summarise(
+    Menstruation = Menstruation,
+    n=n,
+    Percentage = round(n/sum(n),2)
+  )
+
+```
+
 
 Data transformations:
 
@@ -75,11 +216,34 @@ We center all variables entered as continuous.
 ## All cohorts 
 
 ```{r}
+# men
+## menstruation variable removed 
+regression_data_men <- all_cohorts %>% 
+  filter(Group == "Men") %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, Cohort, iron_deficiency, Smoking, iron_complience, Group) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2) 
 
-all_cohorts <- regression_cohorts
+# premenopausal women
+regression_data_pre <- all_cohorts %>% 
+  filter(Group == "Pre_menopause_women") %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, Menstruation, Cohort, iron_deficiency, Smoking, iron_complience, Group) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2) 
 
-all_cohorts %>% 
-  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
+# postmenopausal womem 
+## menstruation variable removed 
+regression_data_post <- all_cohorts %>% 
+  filter(Group == "Post_menopause_women") %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, Cohort, iron_deficiency, Smoking, iron_complience, Group) %>%
   mutate(Age = scale(Age, scale = FALSE)[,1],
          log_CRP = scale(log_CRP, scale = FALSE)[,1],
          donation_count = scale(donation_count, scale = FALSE)[,1],
@@ -92,71 +256,6 @@ all_cohorts %>%
 
 ####### OMA SEKOILU ALKAA #######
 
-## Percentage of ID, all cohorts
-
-```{r}
-all_cohorts %>%
-  dplyr::select(Group, iron_deficiency) %>% 
-  group_by(Group, iron_deficiency) %>% 
-  count() %>% 
-  group_by(Group) %>% 
-  summarise(
-    ID = iron_deficiency,
-    n=n,
-    Percentage = round(n/sum(n),2)
-  )
-```
-
-
-## Percentage of ID, FinDonor
-
-```{r}
-all_cohorts %>%
-  filter(Cohort == "FINDONOR") %>% 
-  dplyr::select(Group, iron_deficiency) %>% 
-  group_by(Group, iron_deficiency) %>% 
-  count() %>% 
-  group_by(Group) %>% 
-  summarise(
-    ID = iron_deficiency,
-    n=n,
-    Percentage = round(n/sum(n),2)
-  )
-```
-
-## Percentage of ID, FinRisk97
-
-```{r}
-all_cohorts %>%
-  filter(Cohort == "FINRISK97") %>% 
-  dplyr::select(Group, iron_deficiency) %>% 
-  group_by(Group, iron_deficiency) %>% 
-  count() %>% 
-  group_by(Group) %>% 
-  summarise(
-    ID = iron_deficiency,
-    n=n,
-    Percentage = round(n/sum(n),2)
-  )
-```
-
-
-## Percentage of ID, Health2000
-
-```{r}
-all_cohorts %>%
-  filter(Cohort == "HEALTH00") %>% 
-  dplyr::select(Group, iron_deficiency) %>% 
-  group_by(Group, iron_deficiency) %>% 
-  count() %>% 
-  group_by(Group) %>% 
-  summarise(
-    ID = iron_deficiency,
-    n=n,
-    Percentage = round(n/sum(n),2)
-  )
-```
-
 # Simple model
 
 Trying a simple model for ID and sex. Specifying wanting the binomial family of generalized models tells the glm function to do logistic regression as opposed to some other type of generalized linear model. The summary function is used to get details about the logistic regression. 
@@ -168,225 +267,37 @@ summary(logistic_simple)
 
 ## thoughts on the summary:
 
-- Deviance residuals look good (close to centered on 0, roughly symmetrical) - OR DO THEY??????
+- Deviance residuals look good (close to centered on 0, roughly symmetrical)
 - Coefficients correspons to the following model: iron deficiency = estimate (intercept) + estimate (SexWomen) x the individual is female (=0 when the individual is male, =1 when the individual is female) --> in this case, predicting ID = (-3.29442)+1.99723x1= -1.29719 for females, -3.29442 for males. In other words, log(odds) of women having ID is -1.29719, for men the log(odds) is -3.29442 --> the second term (1.99723) is log(odds ratio) of the odds that a women will have ID over the odds that a male will have ID.  
-- Std error and z value output shows how the Wald's test was computed for both coefficiants 
-### !!!! NOT SURE HOW TO INTERPRET THE Z VALUE???? !!!!
+- Std error and z value output shows how the Wald's test was computed for both coefficiants (z-value = regression coefficient divided by standard error --> if too big the corresponding true regression coefficient is not 0 and the corresponding variable matters)
 - Pr(<|z|) = p-values :) both look to be significantly lower than 0.05 --> both log(odds) and log(odds ratios) are statistically significant 
 - Default dispersion parameter used for the logistic regression: normally in linear regression the mean and the variance from the data are estimated, but when we do logistic regression we only estimate the mean and then the variance is derived from the mean. For this reason it's possible that the variance is underestimated. If it is, the dispersion parameter can be adjusted in the summary() command 
 - Null deviance and residual deviance are used to compare models, calculate R² and overall p-value
 - AIC = akaike information criterion = the residual deviance adjusted for the number of parameters in the model --> can be used to compare models 
 - Fisher scoring iterations tell how quickly the glm() function converged on the maximum lakelyhood estimates for the coefficients 
 
+```{r}
+rm(logistic_simple)
+```
+
+
 # Fixing the male groups - MAYBE MOVE THIS TO low_ferritin_model? OR IS THIS EVEN NEEDED?
 
 NA:s in the male group (pregnancy and menstruation questions) are a problem, impute menstruation to "no_period" and previous childbirth to "0". 
-# --> RECHECK THAT THESE ACTUALLY WORKED!!!
 
 ```{r}
-all_cohorts_fixed <- all_cohorts %>% 
-  mutate(Menstruation = case_when(
-    Menstruation == "irregular_period" ~ "irregular_period",
-    Menstruation == "regular_period" ~ "regular_period",
-    Menstruation == "no_period" ~ "no_period",
-    Sex == "Men" & is.na(Menstruation) ~ "no_period")) %>% 
-  mutate(Menstruation = ordered(Menstruation, levels =
-    c("regular_period", "irregular_period", "no_period")))
-
-
-all_cohorts_fixed <- all_cohorts_fixed %>% 
-  mutate(PreviousChildbirth = case_when(
-    PreviousChildbirth == "1" ~ "1",
-    PreviousChildbirth == "0" ~ "0",
-    Sex == "Men" & is.na(PreviousChildbirth) ~ "0")) %>% 
-  mutate(PreviousChildbirth = ordered(PreviousChildbirth, levels =
-    c("0", "1")))
-```
-
-# Model using more than one variable
-
-Next let's try creating a model that uses all of the variables to predict ID. `iron_deficiency ~ .` means that we want to model ID using all of the remaining variables. 
-
-
-```{r}
-logistic <- glm(iron_deficiency ~ ., data = all_cohorts, family = "binomial", separation = 'test')
-summary(logistic)
-
-# hmm, does not work since ID column causes separation (???) --> will add variables one by one 
-
-logistic <- glm(iron_deficiency ~ Sex + Age + BMI + Smoking + RedMeat_n + iron_complience + donation_count_2 +  log_last_donation + log_CRP, data = all_cohorts, family = "binomial")
-summary(logistic)
-
-# all variables: Group + Sex + Age + BMI + Menstruation + Smoking + RedMeat_n + iron_complience + PreviousChildbirth + donation_count_2 + log_ferritin + log_last_donation + log_CRP
-
-# variables that worked: Sex + Age + BMI + Smoking + RedMeat_n + iron_complience + donation_count_2 + log_last_donation + log_CRP
-
-# variables that caused separation: Group + log_ferritin
-
-# other errors:
-## Menstruation + PreviousChildbirth -->  Error in `contrasts<-`(`*tmp*`, value = contr.funs[1 + isOF[nn]]) : contrasts can be applied only to factors with 2 or more levels
-
-```
-
-## thoughts on the summary:
-
-1) Deviance residuals look good (?)
-2) The coefficients look statistically significant except for RedMeat_n and iron_complience 
-- Coefficients (statistically significant):
-  Female sex:    1.79
-  Age:          -0.12
-  BMI:          -0.05
-  Smoker:       -0.36
-  Donation#:     0.02
-  Last donation: 0.15
-  CRP:          -0.46
-  Gender is still a good predictor.   
-3) AIC and residual deviance are much smaller for this model than the more simple model in which only gender was used to predict ID, this is to be expected 
-4) to calculate FcFadden's Pseudo R² the log-likelihood of the null model can be extracted out of the logistic variable by getting the value for the null deviance and dividing by -2:
-
-```{r}
-ll.null <- logistic$null.deviance/-2
-```
-
-the log-likelihood for the model can be extracted out out of the logistic variable by getting the value for the residual deviance and dividing by -2:
-
-```{r}
-ll.proposed <- logistic$deviance/-2
-```
-
-Pseudo R² can then be calculated out of these. 
-
-```{r}
-(ll.null - ll.proposed) / ll.null
-```
-
-R² = 0.1189565, this can be interpreted as the overall effect size
-
-A p-value for R² can then be calculated (Chi-square distribution)
-
-```{r}
-1 - pchisq(2*(ll.proposed - ll.null), df=(length(logistic$coefficients)-1))
-```
-p-value = 0, so R² is statistically significant
-
-## Graph
-
-Next draw a graph that shows the predicted probabilities that each individual has ID along with their actual ID status. First create a new data frame that contains the probabilities and actual statuses. 
-
-```{r}
-predicted_ID <- data.frame(
-  probability_of_ID = logistic$fitted.values,
-  ID=all_cohorts$iron_deficiency)
-
-# this part doesn't work, error message: Error in data.frame(probability.of.ID = logistic$fitted.values, ID = all_cohorts$iron_deficiency) : arguments imply differing number of rows: 8894, 13704 
-
-# seems like I've dropped a cohort?
-## rows 1 --> 2322 FinDonor, 2322 participants
-## rows 2323 --> 8897 fr1997, 6572 participants 
-## rows 8898 --> 13704 h2000, 4807 participants 
-## FD+h2000=7129 participants
-## FD+fr1997=8894 --> I have FinDonor and fr1997, but seem to have dropped h2000
-```
-Hmm, maybe h2000 is missing because they don't have data on red meat, but is included in the model? Let's try this again without the red meat variable...
-
-```{r}
-logistic_no_meat <- glm(iron_deficiency ~ Sex + Age + BMI + Smoking + iron_complience + donation_count_2 +  log_last_donation + log_CRP, data = all_cohorts, family = "binomial")
-summary(logistic)
-
-# all variables: Group + Sex + Age + BMI + Menstruation + Smoking + iron_complience + PreviousChildbirth + donation_count_2 + log_ferritin + log_last_donation + log_CRP
-
-# variables that worked: Sex + Age + BMI + Smoking + RedMeat_n + iron_complience + donation_count_2 + log_last_donation + log_CRP
-
-# variables that caused separation: Group + log_ferritin
-
-# other that were not used:
-## Menstruation + PreviousChildbirth -->  Error in `contrasts<-`(`*tmp*`, value = contr.funs[1 + isOF[nn]]) : contrasts can be applied only to factors with 2 or more levels
-## Red_meat_n - don't have this data for the h2000 cohort (or the Dutch cohorts for that matter)
-```
-
-
-
-```{r}
-ll.null <- logistic_no_meat$null.deviance/-2
-```
-
-
-```{r}
-ll.proposed <- logistic_no_meat$deviance/-2
-```
-
-Pseudo R² can then be calculated out of these. 
-
-```{r}
-(ll.null - ll.proposed) / ll.null
-```
-
-R² = 0.1341944, this can be interpreted as the overall effect size
-
-A p-value for R² can then be calculated (Chi-square distribution)
-
-```{r}
-1 - pchisq(2*(ll.proposed - ll.null), df=(length(logistic$coefficients)-1))
-```
-p-value = 0, so R² is statistically significant
-
-## Graph
-
-Next draw a graph that shows the predicted probabilities that each individual has ID along with their actual ID status. First create a new data frame that contains the probabilities and actual statuses. 
-
-```{r}
-predicted_ID <- data.frame(
-  probability_of_ID = logistic_FIN_NL$fitted.values,
-  ID=all_cohorts$iron_deficiency)
-
-# yay, this worked :) so red meat was the problem --> clean up the beginning of the code and remove it from the start 
-
-```
-
-Then sort the data frame from low to high probabilities 
-
-```{r}
-predicted_ID <- predicted_ID[
-  order(predicted_ID$probability_of_ID, decreasing = FALSE),]
-```
-
-Next add a new column to the data frame that has the rank of each sample, from low to high probability
-
-```{r}
-predicted_ID$rank <- 1:nrow(predicted_ID)
-```
-
-Draw the data and save to pdf :)
-
-```{r}
-ggplot(data = predicted_ID, aes(x=rank, y=probability_of_ID)) + 
-  geom_point(aes(color=ID), alpha=1, shape=4, stroke=2) + 
-  xlab("Index") + 
-  ylab("Predicted probability of iron deficiency")
-
-ggsave("iron_deficiency_probabilities.pdf")
-```
-
-
-# Cohort comparison model 
-
-For this model, use only variables we have for all three Finnish and both Dutch cohorts
-
-Start with fixing the male groups (MOVE THIS TO low_ferritin_data, OR MAYBE UNNECESSARY?) 
-
-Dutch cohorts have a yes/no question for menstruation, so regular/irregular need to be recoded to yes. 
-
-```{r}
-all_cohorts_fixed <- all_cohorts %>% 
-  mutate(Menstruation = case_when(
-    Menstruation == "irregular_period" ~ "irregular_period",
-    Menstruation == "regular_period" ~ "regular_period",
-    Menstruation == "no_period" ~ "no_period",
-    Sex == "Men" & is.na(Menstruation) ~ "no_period")) %>% 
-  mutate(Menstruation = ordered(Menstruation, levels =
-    c("regular_period", "irregular_period", "no_period")))
-
-# this part likely not needed, we are missing data on previous pregnancies in one of the Dutch cohorts (or are we?)
+# THIS PART CAN LIKELY BE SKIPPED, WE ARE NOT USING THESE FACTORS FOR MEN!
+# 
+# all_cohorts_fixed <- all_cohorts %>% 
+#   mutate(Menstruation = case_when(
+#     Menstruation == "irregular_period" ~ "irregular_period",
+#     Menstruation == "regular_period" ~ "regular_period",
+#     Menstruation == "no_period" ~ "no_period",
+#     Sex == "Men" & is.na(Menstruation) ~ "no_period")) %>% 
+#   mutate(Menstruation = ordered(Menstruation, levels =
+#     c("regular_period", "irregular_period", "no_period")))
+# 
+# 
 # all_cohorts_fixed <- all_cohorts_fixed %>% 
 #   mutate(PreviousChildbirth = case_when(
 #     PreviousChildbirth == "1" ~ "1",
@@ -394,129 +305,242 @@ all_cohorts_fixed <- all_cohorts %>%
 #     Sex == "Men" & is.na(PreviousChildbirth) ~ "0")) %>% 
 #   mutate(PreviousChildbirth = ordered(PreviousChildbirth, levels =
 #     c("0", "1")))
-
-all_cohorts <- all_cohorts_fixed
 ```
 
 
-```{r}
-logistic_FIN_NL <- glm(iron_deficiency ~ Sex + Age + BMI + Smoking + donation_count_2 +  log_last_donation, data = all_cohorts, family = "binomial")
-summary(logistic_FIN_NL)
+####### OMA SEKOILU LOPPUU #######
 
-# still missing menstruation variable, I keep getting error message for it
-# group variable caused separation and not included for that reason yet -->  are we making graphs based on cohort where group is a variable, or based on group where cohort is a variable?
-# menstruation error message: Error in `contrasts<-`(`*tmp*`, value = contr.funs[1 + isOF[nn]]) : contrasts can be applied only to factors with 2 or more levels
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Model using more than one variable
+
+Next let's try creating a model that uses all of the variables to predict ID. `iron_deficiency ~ .` means that we want to model ID using all of the remaining variables. 
+
+
+```{r}
+#men
+logistic_men <- glm(iron_deficiency ~ Age + 
+                  BMI + 
+                  Smoking + 
+                  iron_complience + 
+                  donation_count_2 + 
+                  log_last_donation + 
+                  log_CRP +
+                  Cohort, 
+                data = regression_data_men, family = "binomial", separation = "test")
+summary(logistic_men)
+
+# premenopausal women
+logistic_pre <- glm(iron_deficiency ~ Age + 
+                  BMI + 
+                  Smoking + 
+                  iron_complience + 
+                  donation_count_2 + 
+                  log_last_donation + 
+                  log_CRP +
+                  Cohort + 
+                  Menstruation, 
+                data = regression_data_pre, family = "binomial", separation = "test")
+summary(logistic_pre)
+
+# postmenopausal women
+logistic_post <- glm(iron_deficiency ~ Age + 
+                  BMI + 
+                  Smoking + 
+                  iron_complience + 
+                  donation_count_2 + 
+                  log_last_donation + 
+                  log_CRP +
+                  Cohort, 
+                data = regression_data_post, family = "binomial", separation = "test")
+summary(logistic_post)
 ```
 
-Yay, all statistically significant :)
+## thoughts on the summary:
 
-Coefficients:
-                   Estimate Std. Error z value Pr(>|z|)
-(Intercept)       -2.594209   0.338650  -7.660 1.85e-14
-SexWomen           1.999381   0.074946  26.677  < 2e-16
-Age               -0.133897   0.011447 -11.697  < 2e-16
-BMI               -0.042745   0.006269  -6.819 9.17e-12
-Smokingyes        -0.455228   0.079693  -5.712 1.11e-08
-donation_count_2   0.024003   0.003296   7.281 3.30e-13
-log_last_donation  0.161354   0.028517   5.658 1.53e-08
+1) Deviance residuals look good 
+2) The coefficients look statistically significant except for RedMeat_n and iron_complience 
+- Coefficients (statistically significant = */**/***):
+Age                0.062362    *  
+BMI               -0.038251    *  
+Smokingyes        -0.812771    ***
+iron_complience    0.220786    *  
+donation_count_2   0.005218     p > 0.05  
+log_last_donation -0.461829    ** 
+log_CRP           -0.543185     p > 0.05  
+CohortFINRISK97    1.660630    ** 
+CohortHEALTH00     1.224275    p = 0.05    
+3) AIC and residual deviance are much smaller for this model than the more simple model in which only gender was used to predict ID, this is to be expected 
+4) to calculate FcFadden's Pseudo R² the log-likelihood of the null model can be extracted out of the logistic variable by getting the value for the null deviance and dividing by -2:
 
 ```{r}
-ll.null <- logistic_FIN_NL$null.deviance/-2
+# men
+ll.null_men <- logistic_men$null.deviance/-2
+# premenopausal women
+ll.null_pre <- logistic_pre$null.deviance/-2
+# postmenopausal women
+ll.null_post <- logistic_post$null.deviance/-2
 ```
 
+the log-likelihood for the model can be extracted out out of the logistic variable by getting the value for the residual deviance and dividing by -2:
 
 ```{r}
-ll.proposed <- logistic_FIN_NL$deviance/-2
+# men
+ll.proposed_men <- logistic_men$deviance/-2
+# premenopausal women
+ll.proposed_pre <- logistic_pre$deviance/-2
+# postmenopausal women
+ll.proposed_post <- logistic_post$deviance/-2
 ```
 
 Pseudo R² can then be calculated out of these. 
 
 ```{r}
-(ll.null - ll.proposed) / ll.null
+# men
+(ll.null_men - ll.proposed_men) / ll.null_men
+# premenopausal women
+(ll.null_pre - ll.proposed_pre) / ll.null_pre
+# postmenopausal women
+(ll.null_post - ll.proposed_post) / ll.null_post
 ```
 
-R² = 0.1318253, this can be interpreted as the overall effect size
+R² = 0.04332637 (men), 0.02779777 (premenopausal women) and 0.02888689 (postmenopausal women), these can be interpreted as the overall effect sizes in the three groups
 
 A p-value for R² can then be calculated (Chi-square distribution)
 
 ```{r}
-1 - pchisq(2*(ll.proposed - ll.null), df=(length(logistic_FIN_NL$coefficients)-1))
+# men
+1 - pchisq(2*(ll.proposed_men - ll.null_men), df=(length(logistic_men$coefficients)-1))
+# premenopausal women
+1 - pchisq(2*(ll.proposed_pre - ll.null_pre), df=(length(logistic_pre$coefficients)-1))
+# postmenopausal women
+1 - pchisq(2*(ll.proposed_post - ll.null_post), df=(length(logistic_post$coefficients)-1))
 ```
-p-value = 0, so R² is statistically significant
+p-value close to 0, so R² is statistically significant
 
 ## Graph
 
 Next draw a graph that shows the predicted probabilities that each individual has ID along with their actual ID status. First create a new data frame that contains the probabilities and actual statuses. 
 
 ```{r}
-predicted_ID_FIN_NL <- data.frame(
-  probability_of_ID = logistic_FIN_NL$fitted.values,
-  ID=all_cohorts$iron_deficiency)
+# men
+predicted_ID_men <- data.frame(
+  probability_of_ID_men = logistic_men$fitted.values,
+  ID=regression_data_men$iron_deficiency)
+
+# premenopausal women
+predicted_ID_pre <- data.frame(
+  probability_of_ID_pre = logistic_pre$fitted.values,
+  ID=regression_data_pre$iron_deficiency)
+
+# postmenopausal women
+predicted_ID_post <- data.frame(
+  probability_of_ID_post = logistic_post$fitted.values,
+  ID=regression_data_post$iron_deficiency)
 ```
 
 Then sort the data frame from low to high probabilities 
 
 ```{r}
-predicted_ID <- predicted_ID_FIN_NL[
-  order(predicted_ID_FIN_NL$probability_of_ID, decreasing = FALSE),]
+# men
+predicted_ID_men <- predicted_ID_men[
+  order(predicted_ID_men$probability_of_ID_men, decreasing = FALSE),]
+
+# premenopausal women 
+predicted_ID_pre <- predicted_ID_pre[
+  order(predicted_ID_pre$probability_of_ID_pre, decreasing = FALSE),]
+
+# postmenopausal women
+predicted_ID_post <- predicted_ID_post[
+  order(predicted_ID_post$probability_of_ID_post, decreasing = FALSE),]
 ```
 
 Next add a new column to the data frame that has the rank of each sample, from low to high probability
 
 ```{r}
-predicted_ID_FIN_NL$rank <- 1:nrow(predicted_ID_FIN_NL)
+# men 
+predicted_ID_men$rank <- 1:nrow(predicted_ID_men)
+
+# premenopausal women 
+predicted_ID_pre$rank <- 1:nrow(predicted_ID_pre)
+
+# postmenopausal women
+predicted_ID_post$rank <- 1:nrow(predicted_ID_post)
 ```
 
 Draw the data and save to pdf :)
 
 ```{r}
-ggplot(data = predicted_ID_FIN_NL, aes(x=rank, y=probability_of_ID)) + 
+# men
+ggplot(data = predicted_ID_men, aes(x=rank, y=probability_of_ID_men)) + 
   geom_point(aes(color=ID), alpha=1, shape=4, stroke=2) + 
   xlab("Index") + 
-  ylab("Predicted probability of iron deficiency")
+  ylab("Predicted probability of iron deficiency, men") 
 
-ggsave("iron_deficiency_probabilities.pdf")
+ggsave("iron_deficiency_probabilities_men.pdf")
+
+# premenopausal women
+ggplot(data = predicted_ID_pre, aes(x=rank, y=probability_of_ID_pre)) + 
+  geom_point(aes(color=ID), alpha=1, shape=4, stroke=2) + 
+  xlab("Index") + 
+  ylab("Predicted probability of iron deficiency, premenopausal women") 
+
+ggsave("iron_deficiency_probabilities_pre.pdf")
+
+# postmenopausal women 
+ggplot(data = predicted_ID_post, aes(x=rank, y=probability_of_ID_post)) + 
+  geom_point(aes(color=ID), alpha=1, shape=4, stroke=2) + 
+  xlab("Index") + 
+  ylab("Predicted probability of iron deficiency, postmenopausal women") 
+
+ggsave("iron_deficiency_probabilities_post.pdf")
 ```
 
+Diagnostics for model: 
 
+```{r}
+# men
+plot(logistic_men)
 
+# premenopausal women 
+plot(logistic_pre)
 
-######## OMA SEKOILU LOPPUU ########
+# postmenopausal women
+plot(logistic_post)
+```
+
+```{r}
+# men 
+vif(logistic_men)
+
+# premenopausal women
+vif(logistic_pre)
+
+# postmenopausal women
+vif(logistic_post)
+#if over 10, we should worry (why?)
+```
+
 
 
 ```{r}
-all_cohorts_fixed_test <- all_cohorts_fixed %>% 
-logit_pre_menopausal <- glm(
-  iron_deficiency ~ BMI +
-    age,
-    data=test_data_std,
-    family="binomial", separation = 'test')
- 
- summary(logit_pre_menopausal)
-
-
-#https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression
-#https://stats.stackexchange.com/questions/45803/logistic-regression-in-r-resulted-in-perfect-separation-hauck-donner-phenomenon
+# liitetään takaisin yhteen kaikki kolme ryhmää (eli men, pre, post) - mitä tapahtuu menstruationille?
+bind_rows()
 ```
-  
-
-```{r}
-plot(logit_pre_menopausal)
-```
-
-```{r}
-vif(logit_pre_menopausal)
-```
-
-```{r}
-logistic.display(logit_pre_menopausal)
-```
-  
-############### END OF PART WE WILL USE 
-
-
-
-
 
 
   
@@ -525,10 +549,14 @@ https://data.princeton.edu/wws509/r/c3s1
 https://stats.stackexchange.com/questions/304833/how-to-calculate-odds-ratio-and-95-confidence-interval-for-logistic-regression
 https://www.andrewheiss.com/blog/2016/04/25/convert-logistic-regression-standard-errors-to-odds-ratios-with-r/
 
+ÄLÄ OTA TÄTÄ POIS!!!!!
+
 ```{r}
 detach("package:safeBinaryRegression", unload=TRUE)
 #safeBinaryRegression messes up booting
 ```
+
+#### stop #####
 
 ## Define auxiliarry functions for bootstrapping
 ```{r}
@@ -537,15 +565,14 @@ detach("package:safeBinaryRegression", unload=TRUE)
 
 
 get_coefficients <- function(data, boot_ind){
-  fit <- glm (health_outcome~.,
+  fit <- glm(iron_deficiency~.,
               data[boot_ind,],
               family = "binomial")
 #  print(names(coef(fit)))
   return(coef(fit))
 }
 
-
-
+# lasketaan luottamusvälejä
 compute_Bca_CI <-function(fit_boot,conf = 0.95){
   cat("compute_Bca_CI with conf: ",conf,"\n")
   Bca_inf = rep(0, length(fit_boot$t0))
@@ -571,7 +598,7 @@ get_bootstrap <- function(data, nb_boot){
   names(fit_boot_distrib) <- names(fit_boot$t0)
 
   fit_boot_Bca <- compute_Bca_CI(fit_boot)
-  fit_boot_Bca_2 <- compute_Bca_CI(fit_boot,conf=0.80)
+  fit_boot_Bca_2 <- compute_Bca_CI(fit_boot,conf=0.90)
   cat(nrow(data),"get_bootstrap 3\n")
   return(list(fit_boot_distrib,fit_boot_Bca,fit_boot_Bca_2))
 }
@@ -589,21 +616,21 @@ get_bootstrap <- function(data, nb_boot){
 get_bootstrap_coeffs <- function(regression_data, current_group, nb_boot )
 {
 
-  ## preprocess and standardize data
+  ## preprocess and standardize data - muuta muuttujat omiin, ei ehkä tarvii tehdä
   
-    test_data_std <- regression_data %>% 
-      filter(group == current_group) %>% 
-      dplyr::select(donor, age, starting_weight, BMI_diff,
-                    log_Ferritin_beginning, Hb_beginning, 
-                    donation_frequency) %>% 
-      gather(key = key, value = value, -donor) %>% 
-      group_by(key) %>% 
-      mutate(value_scale = scale(value, scale = FALSE)[,1]) %>% 
-      dplyr::select(-value) %>% 
-      spread(key = key, value = value_scale) 
+    # test_data_std <- regression_data %>% 
+    #   filter(group == current_group) %>% 
+    #   dplyr::select(donor, age, starting_weight, BMI_diff,
+    #                 log_Ferritin_beginning, Hb_beginning, 
+    #                 donation_frequency) %>% 
+    #   gather(key = key, value = value, -donor) %>% 
+    #   group_by(key) %>% 
+    #   mutate(value_scale = scale(value, scale = FALSE)[,1]) %>% 
+    #   dplyr::select(-value) %>% 
+    #   spread(key = key, value = value_scale) 
      
     if (current_group == "Men") {
-      test_data_std <- inner_join(test_data_std,regression_data %>% 
+      test_data_std <- regression_data %>% 
                                     dplyr::select(donor, health_outcome, health_very_good, health_excellent,
                                                 #  sleep_night_d, ##Error in t.star[r, ] <- res[[r]] :
                                                   cholesterol_d,
@@ -719,6 +746,8 @@ get_bootstrap_coeffs <- function(regression_data, current_group, nb_boot )
         dplyr::select(-donor) 
     }
   cat(nrow(test_data_std),current_group,"get_bootstrap_coeffs 1\n")
+  
+  # tässä itse bootstrapping
   result <- test_data_std %>% 
   get_bootstrap(nb_boot = nb_boot)
 
