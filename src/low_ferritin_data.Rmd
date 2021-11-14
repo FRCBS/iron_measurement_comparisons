@@ -34,6 +34,9 @@ library(epitools)
 library(ez)
 library(ggbeeswarm)
 library(tidymodels)
+
+  # echo "rmarkdown::render('low_ferritin_data.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/low_ferritin_data_FIN.pdf')" | R --slave
+
 ```
 
 # Data loading and preparation
@@ -75,22 +78,21 @@ h2000$Cohort <- c("HEALTH00")
 
 There are "cohort %>% distinct(ID_variable) %>% nrow()" individials enrolled in the studies. 
 
-  * FinDonor: 2584   indiv_donations_data %>% distinct(donor) %>% nrow()
-  * FinRisk97: 7943  fr1997 %>% distinct(RELEASE_ID) %>% nrow()
-  * Health2000: 6264 h2000 %>% distinct(RELEASE_ID) %>% nrow()
+  * FinDonor: `r indiv_donations_data %>% distinct(donor) %>% nrow()`
+  * FinRisk97: `r fr1997 %>% distinct(RELEASE_ID) %>% nrow()`
+  * Health2000: `r h2000 %>% distinct(RELEASE_ID) %>% nrow()`
         
-Once we remove participants that have no ferritin or no Hb measurement data (and for blood donors for any donation event) there are `r cohort_name %>%  filter(!is.na(Ferritin) & !is.na(Hb_v) ) %>% distinct(ID_variable) %>% nrow()` participants left  
+Once we remove participants that have no ferritin or no Hb measurement data (and for blood donors for any donation event) there are "r cohort_name %>%  filter(!is.na(Ferritin) & !is.na(Hb_v) ) %>% distinct(ID_variable) %>% nrow()" participants left  
 
-  * FinDonor: 2580 `r indiv_donations_data %>%  filter(!is.na(Ferritin) & !is.na(Hb_v) ) %>% distinct(donor) %>% nrow()`
-  
-  * FinRisk97: 462 `r fr1997 %>%  filter(!is.na(FERRITIN) & !is.na(HGB) ) %>% distinct(RELEASE_ID) %>% nrow()`
+  * FinDonor: `r indiv_donations_data %>%  filter(!is.na(Ferritin) & !is.na(Hb_v) ) %>% distinct(donor) %>% nrow()`
+  * FinRisk97: `r fr1997 %>%  filter(!is.na(FERRITIN) & !is.na(HGB) ) %>% distinct(RELEASE_ID) %>% nrow()`
            
-            * 7380 `r fr1997 %>% filter(!is.na(FERRITIN)) %>% distinct(RELEASE_ID) %>% nrow()`
-            * 491 `r fr1997 %>%  filter(!is.na(HGB)) %>% distinct(RELEASE_ID) %>% nrow()`
+            * `r fr1997 %>% filter(!is.na(FERRITIN)) %>% distinct(RELEASE_ID) %>% nrow()`
+            * `r fr1997 %>%  filter(!is.na(HGB)) %>% distinct(RELEASE_ID) %>% nrow()`
               
-  * Health2000: 5250 `r h2000 %>%  filter(!is.na(FERRITIINI) & !is.na(B_Hb) ) %>% distinct(RELEASE_ID) %>% nrow()`
+  * Health2000: `r h2000 %>%  filter(!is.na(FERRITIINI) & !is.na(B_Hb) ) %>% distinct(RELEASE_ID) %>% nrow()`
 
-At this stage we noticed we only had hemoglobin data from 491 FinRisk97 participants. Using the table function (`r table(fr1997$HGB, fr1997$SUKUP)`, SUKUP = sukupuoli = sex, 1=male, 2=female) we found out that all these participants are male. As such, we didn't remove NA:s for Hb and will not use Hb in the model for this specific cohort.  
+At this stage we noticed we only had hemoglobin data from 491 FinRisk97 participants. Using the table function ("table(fr1997$HGB, fr1997$SUKUP)", SUKUP = sukupuoli = sex, 1=male, 2=female) we found out that all these participants are male. As such, we didn't remove NA:s for Hb and will not use Hb in the model for this specific cohort.  
 
 ```{r , warning=FALSE}
 
@@ -201,7 +203,6 @@ names(h2000_summary)[names(h2000_summary) == "BD07"] <- "CurrentPregnancy"
 
 ## THESE ARE ONLY NEEDED FOR h2000 to figure out the n/a:s related to menstruation
 names(h2000_summary)[names(h2000_summary) == "BD06"] <- "WhyEnd"
-#hysterectomy?
 
 ```
 
@@ -213,11 +214,11 @@ In this section we assign women to period/no period groups. The menstruation que
   * FinRisk97: Do you still menstruate? (1=reg., 2=irreg., 3=no)
   * Health2000: BD03 = do you have periods nowadays? (1=reg., 2=irreg., 3=no)
 
-There are `r cohort_summary_name %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()` women with no  answer to the question regarding their menstrual status. 
+There are "r cohort_summary_name %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()" women with no  answer to the question regarding their menstrual status. 
 
-  * FinDonor: 17 `r blood_data_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
-  * FinRisk97: 41 `r fr1997_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
-  * Health00: 1029 `r h2000_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
+  * FinDonor: `r blood_data_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
+  * FinRisk97: `r fr1997_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
+  * Health00: `r h2000_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
   
 Evidently we are missing menstruation data from >37 % of female Health2000 participants.
 
@@ -235,8 +236,8 @@ The cohort also contains a variable for reproductive stages, MENOP:
 Removing n/a:s for the MENOP variable `r h2000_summary %>% filter(Sex == "Women" & is.na(MENOP)) %>%  nrow()` would remove only 48 participants. In the next code chunk we investigate the difference between these variables in order to figure out which we can/should use.
 
 In the home interview instruction (https://thl.fi/documents/189940/4108213/T2001_eng.pdf/cd17a5fe-ddf3-4649-9ddd-a282b1809de9, page 41) we find out that only women under the age of 55 yrs were asked about menstruation. This amounts to:
-  * 180 NAs in the <55 yrs group `r h2000_summary %>% filter(Sex == "Women" & Age < 55 & is.na(Menstruation)) %>%  nrow()`
-  * 849 NAs in the >=55 yrs group `r h2000_summary %>% filter(Sex == "Women" & Age >= 55 & is.na(Menstruation)) %>%  nrow()`
+  * # NAs in the <55 yrs group `r h2000_summary %>% filter(Sex == "Women" & Age < 55 & is.na(Menstruation)) %>%  nrow()`
+  * # NAs in the >=55 yrs group `r h2000_summary %>% filter(Sex == "Women" & Age >= 55 & is.na(Menstruation)) %>%  nrow()`
 
 Our original plan was to place participants in pre- and postmenopausal groups based on menstrual status. Removing n/a:s based on the MENOP variable would remove fewer participants, however we are missing this data in the other cohorts. Next we try to find out how menstruation, reproductive stage and age align in the Health2000 cohort: 
 
@@ -261,80 +262,43 @@ h2000_mens_missing <- h2000_mens_missing %>%
   )) %>% 
   filter(Sex == "Women") 
 
-
 ## first we check  what data on reproductive state looks like 
 h2000_mens_missing %>% 
   filter(is.na(Stage) ) %>% 
   nrow() 
-# 48 participants missing data on reproductive stage 
 
 h2000_missing_stage <- h2000_mens_missing %>% 
   filter(!is.na(Stage)) 
 
 # check to see if recode worked
 table(factor(h2000_missing_stage$Stage, levels = c("PREmenopausal", "PERImenopausal", "POSTmenopausal")), h2000_missing_stage$MENOP)
-
- #                   1    2    3
- # PREmenopausal     0    0 1516
- # PERImenopausal    0  103    0
- # POSTmenopausal 1092    0    0       -> yes, they were assigned to the right groups
-
+# yes, they were assigned to the right groups
 
 # compare reproductive stage with reported bleeding in the two age groups (<45, >45)
 table(factor(h2000_mens_missing$MENSTRUATION, levels = c("regular", "irregular", "no")), factor(h2000_mens_missing$Stage, levels = c("PREmenopausal", "PERImenopausal", "POSTmenopausal")), factor(h2000_mens_missing$AgeGroup, levels = c("younger", "older")))
 
-                                  # YOUNGER (<45 yrs):
-                                  #            
-                                  #             PREmenopausal PERImenopausal POSTmenopausal
-                                  #   regular             858              0              0
-                                  #   irregular           119              0              0
-                                  #   no                   11              6             57
-                                  # 
-                                  # OLDER (>= 45 yrs):
-                                  #            
-                                  #             PREmenopausal PERImenopausal POSTmenopausal
-                                  #   regular             316              0              0
-                                  #   irregular           135              0              0
-                                  #   no                   16             38            160
-   
-
 # compare reported bleeding in the two age groups 
 table(factor(h2000_mens_missing$MENSTRUATION, levels = c("regular", "irregular", "no")), factor(h2000_mens_missing$AgeGroup, levels = c("younger", "older")))
-
-
-                                                #           younger older
-                                                # regular       858   316
-                                                # irregular     121   141
-                                                # no             78   216
 
 # compare reported reproductive stage in the two age groups 
 table(factor(h2000_mens_missing$Stage, levels = c("PREmenopausal", "PERImenopausal", "POSTmenopausal")), factor(h2000_mens_missing$AgeGroup, levels = c("younger", "older")))
 
 
-                                                #                younger older
-                                                # PREmenopausal      995   521
-                                                # PERImenopausal      11    92
-                                                # POSTmenopausal      78  1014
-
-
-## next we investigate how removing n/a:s only from women under 55 yrs compares to the above data (women older that 55 are concidered postmenopausal)
+## next we investigate how removing n/a:s only from women under 55 yrs compares to the above data (women older that 55 are considered postmenopausal)
 
 women_older_than_55 <- h2000_mens_missing %>% 
-  filter(Age >= 55) %>% nrow() # 849 women 
+  filter(Age >= 55) %>% nrow() 
 
 h2000_mens_missing %>% 
   filter(Age < 55 & is.na(MENSTRUATION)) %>% 
   nrow() 
-# we are missing data from 180 women < 55 years 
 
 h2000_mens_missing %>% 
   filter(Age < 45 & is.na(MENSTRUATION)) %>% 
   nrow() 
-# 43 women with missing data are < 45 years 
-
 
 women_older_than_55 <- h2000_mens_missing %>% 
-  filter(Age >= 55) %>% nrow() # 849 women 
+  filter(Age >= 55) %>% nrow()  
 
 women_older_than_55 <- filter(h2000_mens_missing,
                               Age >= 55 & is.na(Menstruation))$ID
@@ -345,16 +309,22 @@ test <- h2000_mens_missing %>%
 
 ```
 
-For now we will remove  n/a:s from women under 55 and use the same strategy for assigning reproductive groups as we do for the other cohorts. Once we recieve an explanation for the reasoning behind the MENOP-varible we may reconcider. 
+We will remove  n/a:s from women under 55 and use the same strategy for assigning reproductive groups as we do for the other cohorts. According to THL the MENOP-variable has been constructed from reported menstruation and use of hormone therapy in the following manner: 
+1= postmenopause, time since last period >= 12 months
+2= perimenoause, time since last period 6-12 months OR hormone replacement therapy, period had not stopped before start of use 
+3= premenopause, time since last period < 6 months
+4= . = data missing 
+5= .X = participant was not asked (short forms)
 
+Removing NAs for Menstruation as opposed to MENOP will remove more women, but at this point using the same way of filtering participants for all cohorts seems to be the best way to move forward. As we are also interested in menstruation as a variable in itself, we would still have to remove the participants with NAs for this particular question at a later stage. 
 
 ## Demographic group specification and assignment continued
 
-Out of the women with no answer to the menstruation question, `r cohort_summary_name %>% filter(Sex == "Women" & is.na(Menstruation) & age >= 55) %>%  nrow()` are older than 55. We impute these to no period so they can be included in the postmenopausal women. 
+Out of the women with no answer to the menstruation question, "r cohort_summary_name %>% filter(Sex == "Women" & is.na(Menstruation) & age >= 55) %>%  nrow()" are older than 55. We impute these to no period so they can be included in the postmenopausal women. 
 
-  * FinDonor: 3 `r blood_data_summary %>% filter(Sex == "Women" & is.na(Menstruation) & Age >= 55) %>%  nrow()`
-  * FinRisk97: 32 `r fr1997_summary %>% filter(Sex == "Women" & is.na(Menstruation) & Age >= 55) %>%  nrow()`
-  * Health2000: 849 `r h2000_summary %>% filter(Sex == "Women" & is.na(Menstruation) & Age >= 55) %>%  nrow()`
+  * FinDonor: `r blood_data_summary %>% filter(Sex == "Women" & is.na(Menstruation) & Age >= 55) %>%  nrow()`
+  * FinRisk97: `r fr1997_summary %>% filter(Sex == "Women" & is.na(Menstruation) & Age >= 55) %>%  nrow()`
+  * Health2000: `r h2000_summary %>% filter(Sex == "Women" & is.na(Menstruation) & Age >= 55) %>%  nrow()`
 
 ```{r}
 # FINDONOR
@@ -381,11 +351,11 @@ h2000_summary <- h2000_summary %>%
 ```
 
 
-Female study participants with no menstruation response after imputation are removed:  `r cohort_name %>% filter(sex == "Women" & is.na(Menstruation)) %>% nrow()` donors.)
+Female study participants with no menstruation response after imputation are removed: "cohort_name %>% filter(sex == "Women" & is.na(Menstruation)) %>% nrow()" donors.)
 
-  * FinDonor: 14 `r blood_data_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
-  * FinRisk97: 9 `r fr1997_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
-  * Health2000: 180 `r h2000_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
+  * FinDonor: `r blood_data_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
+  * FinRisk97: `r fr1997_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
+  * Health2000: `r h2000_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>%  nrow()`
 
 ```{r}
 #FINDONOR
@@ -442,10 +412,7 @@ fr1997_n_women_removed <- fr1997_summary_final %>%
 h2000_summary <- h2000_summary %>%
   mutate(Menstruation = ifelse(ID %in% older_h2000, "no_period", as.character(Menstruation)))
 
-
-
 h2000_nb_women_no_menstruation_response <- h2000_summary %>% filter(Sex == "Women" & is.na(Menstruation)) %>% nrow()
-
 
 ## remove female Health2000 participants with no menstruation response
 h2000_summary_final <- h2000_summary %>%
@@ -473,10 +440,10 @@ We now define the following groups:
 
 + premenopausal: regular or irregular menstruation reported
 + postmenopausal: no menstruation reported and age equal to > 45
-+ donors younger than 45 and no reported menstruation are excluded (`r cohort_n_women_removed`)
-  * 77 FinFonor `r findonor_n_women_removed`
-  * 81 FinRisk `r fr1997_n_women_removed`
-  * 83 FinFonor `r h2000_n_women_removed`
++ donors younger than 45 and no reported menstruation are excluded ("cohort_n_women_removed")
+  * FinDonor `r findonor_n_women_removed`
+  * FinRisk `r fr1997_n_women_removed`
+  * Health2000 `r h2000_n_women_removed`
 
 ```{r}
 #FINDONOR:
@@ -576,7 +543,7 @@ h2000_summary_final <- h2000_summary_final %>%
 
 ### Donation history
 
-We remove `r blood_data_summary_final %>% filter(is.na(DaysToPreviousFB)) %>% nrow()` = 42 blood donors who have not donated previously (they are missing the number of days since last donation variable). 
+We remove `r blood_data_summary_final %>% filter(is.na(DaysToPreviousFB)) %>% nrow()` blood donors who have not donated previously (they are missing the number of days since last donation variable). 
 
 ```{r}
 new_donors_data <- blood_data_summary_final %>% 
@@ -593,10 +560,10 @@ blood_data_summary_final <- blood_data_summary_final %>%
 
 ### BMI
 
-We remove `r cohort_name %>% filter(is.na(BMI)) %>% nrow()` participants for whom we do not have the BMI data:
- * FinDonor: 21 `r blood_data_summary_final %>% filter(is.na(BMI)) %>% nrow()`
- * FinRisk97: 8 `r fr1997_summary_final %>% filter(is.na(BMI)) %>% nrow()`
- * Health2000: 1 `r h2000_summary_final %>% filter(is.na(BMI)) %>% nrow()`
+We remove "cohort_name %>% filter(is.na(BMI)) %>% nrow()" participants for whom we do not have the BMI data:
+ * FinDonor: `r blood_data_summary_final %>% filter(is.na(BMI)) %>% nrow()`
+ * FinRisk97: `r fr1997_summary_final %>% filter(is.na(BMI)) %>% nrow()`
+ * Health2000: `r h2000_summary_final %>% filter(is.na(BMI)) %>% nrow()`
 
 ```{r}
 #### FinDonor
@@ -623,12 +590,12 @@ h2000_summary_final <- h2000_summary_final %>%
 
 ### Smoking
 
-We remove `r cohort_name %>% filter(is.na(BMI)) %>% nrow()` participants for whom we do not have smoking data:
-  * FinDonor: 1      `r blood_data_summary_final %>% filter(is.na(Smoking)) %>% nrow()`
-  * FinRisk97: 3111  `r fr1997_summary_final  %>% filter(is.na(Smoking)) %>% nrow()`
-           * `r fr1997 %>%  filter(is.na(Q69)) %>%  nrow()` = 3377/7943 -> 43 % missing
+We remove "cohort_name %>% filter(is.na(BMI)) %>% nrow()" participants for whom we do not have smoking data:
+  * FinDonor: `r blood_data_summary_final %>% filter(is.na(Smoking)) %>% nrow()`
+  * FinRisk97: `r fr1997_summary_final  %>% filter(is.na(Smoking)) %>% nrow()`
+           * `r fr1997 %>%  filter(is.na(Q69)) %>%  nrow()` 43 % missing
   * Health2000: 2153 `r h2000_summary_final %>% filter(is.na(Smoking)) %>% nrow()` 
-           * `r h2000 %>%  filter(is.na(FB05)) %>%  nrow()` = 2743/6264 -> 44 % missing
+           * `r h2000 %>%  filter(is.na(FB05)) %>%  nrow()` 44 % missing
     
 As removing n/a:s for smoking removes >5000 general population participants as opposed to only one in the blood donor cohort, we suspect there being something wrong with the original data. Looking at the original rdata makes it clear this is not a coding error. At this point we impute the n/a:s for the general population cohorts as non-smokers, while we wait for THL to explain the missing data. 
 
@@ -662,8 +629,8 @@ h2000_summary_final <- h2000_summary_final %>%
 
 ### Previous childbirth
 
-We remove `r cohort_name %>% filter((group != "Men" & is.na(PreviousChildbirth)))%>% nrow()` female donors who did not answer the question on childbirth: 
-  * FinDonor: 3 `r blood_data_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
+We remove "cohort_name %>% filter((group != "Men" & is.na(PreviousChildbirth)))%>% nrow()" female donors who did not answer the question on childbirth: 
+  * FinDonor: `r blood_data_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
   * FinRisk97: 16 `r fr1997_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
   * Health2000: 6 `r h2000_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
 
@@ -693,11 +660,11 @@ h2000_summary_final <- h2000_summary_final %>%
 
 ### Current pregnancy
 
-Only women <45 yrs were asked whether they are currently pregnant and if so, how many weeks (source: https://www.julkari.fi/bitstream/handle/10024/78181/2005b6.pdf?sequence=1&isAllowed=y, page 56). This means we have a total of 1246 n/a:s for this specific question. We added a filter for age <45 years old, which leaves us with 3 missing answers. NA:s in >45-year-oldes are imputed as not pregnant. Although pregnancy is possible after this age, chances are lower. We used this age as our cut-off for menopause. 
+Only women <45 yrs were asked whether they are currently pregnant and if so, how many weeks (source: https://www.julkari.fi/bitstream/handle/10024/78181/2005b6.pdf?sequence=1&isAllowed=y, page 56). We added a filter for age <45 years old and imputed NA:s in >45-year-oldes as not pregnant. Although pregnancy is possible after this age, chances are much lower. We also used this age as our cut-off for menopause. 
 
-We will now remove `r cohort_name %>% filter((Group != "Men" & is.na(CurrentPregnancy)))%>% nrow()` females who did not answer the pregnancy question: 
-  * FinRisk97: 9 `r fr1997_summary_final %>% filter((Group != "Men" & is.na(CurrentPregnancy)))%>% nrow()`
-  * Health00: 3 `r h2000_summary_final %>% filter((Group != "Men" & Age <=45 & is.na(CurrentPregnancy)))%>% nrow()`
+We will now remove "cohort_name %>% filter((Group != "Men" & is.na(CurrentPregnancy)))%>% nrow()" females who did not answer the pregnancy question: 
+  * FinRisk97: `r fr1997_summary_final %>% filter((Group != "Men" & is.na(CurrentPregnancy)))%>% nrow()`
+  * Health00: `r h2000_summary_final %>% filter((Group != "Men" & Age <=45 & is.na(CurrentPregnancy)))%>% nrow()`
 
 ```{r}
 # FinRisk97
@@ -724,7 +691,7 @@ h2000_summary_final$CurrentPregnancy[is.na(h2000_summary_final$CurrentPregnancy)
 
 ### Iron supplementation 
 
-We remove `r blood_data_summary_final %>% mutate(IronComplienceNumeric = ifelse(GivenIronSupplements == FALSE, 0, IronComplienceNumeric )) %>%  filter(is.na(IronComplienceNumeric)) %>% nrow()` = 77 donors that did not answer the two questions (did they receive iron supplements at during their last donation and supplement complience)
+We remove `r blood_data_summary_final %>% mutate(IronComplienceNumeric = ifelse(GivenIronSupplements == FALSE, 0, IronComplienceNumeric )) %>%  filter(is.na(IronComplienceNumeric)) %>% nrow()` donors that did not answer the two questions (did they receive iron supplements at during their last donation and supplement complience)
 
 For the modelling, we impute a 0 (no supplementation) to iron_comp_c when the donor reports not being offered iron supplementation.
 
@@ -744,9 +711,9 @@ blood_data_summary_final <- blood_data_summary_final %>%
 
 ### Red meat intake 
 
-We remove `r cohort_name %>% filter(is.na(RedMeat)) %>% nrow()` participants for whom we do not have Smoking data:
-  * Findonor: 10 `r blood_data_summary_final %>% filter(is.na(RedMeat)) %>% nrow()` 
-  * FinRisk97: 30 `r fr1997_summary_final %>% filter(is.na(RedMeat)) %>% nrow()`  
+We remove "cohort_name %>% filter(is.na(RedMeat)) %>% nrow()" participants for whom we do not have Smoking data:
+  * Findonor: `r blood_data_summary_final %>% filter(is.na(RedMeat)) %>% nrow()` 
+  * FinRisk97: `r fr1997_summary_final %>% filter(is.na(RedMeat)) %>% nrow()`  
 
 Health2000 participants were not asked about red meat intake.
 
@@ -782,10 +749,10 @@ nb_removed_fr97 <- nb_removed_fr97 +
 
 ### Age
 
-We remove `r cohort_name %>% filter(is.na(Age)) %>% nrow()` participants with unknown age:
- * FinDonor: 0 `r blood_data_summary_final %>% filter(is.na(Age)) %>% nrow()`
- * FinRisk97: 0 `r fr1997_summary_final %>% filter(is.na(Age)) %>% nrow()`
- * Health2000: 0 `r h2000_summary_final %>% filter(is.na(Age)) %>% nrow()`
+We remove "cohort_name %>% filter(is.na(Age)) %>% nrow()" participants with unknown age:
+ * FinDonor: `r blood_data_summary_final %>% filter(is.na(Age)) %>% nrow()`
+ * FinRisk97: `r fr1997_summary_final %>% filter(is.na(Age)) %>% nrow()`
+ * Health2000: `r h2000_summary_final %>% filter(is.na(Age)) %>% nrow()`
 
 ```{r}
 #### FinDonor
@@ -811,16 +778,16 @@ h2000_summary_final <- h2000_summary_final %>%
 ```
 
 The total number removed because of missing questionnaire data is:
-`r nb_removed_blood` = 14
-`r nb_removed_fr97` = 9
-`r nb_removed_h2000` = 180
+`r nb_removed_blood` 
+`r nb_removed_fr97` 
+`r nb_removed_h2000`
 
 ## Remove cohort participants who are currently pregnant
 
 As current pregnancy was an exclusion criteria for the NL general population cohort and pregnant women are not allowed to donate blood, we will remove women who are currently pregnant from the FIN general population cohorts. The number of removed participants is 
-`r fr1997_summary_final %>% filter(CurrentPregnancy == 2) %>% nrow()`
-  * FinRisk97: 69 `r fr1997_summary_final %>% filter(CurrentPregnancy == 2) %>% nrow()`
-  * Health00: 25 `r h2000_summary_final %>% filter(CurrentPregnancy == 1) %>% nrow()`
+
+  * FinRisk97: `r fr1997_summary_final %>% filter(CurrentPregnancy == 2) %>% nrow()`
+  * Health00: `r h2000_summary_final %>% filter(CurrentPregnancy == 1) %>% nrow()`
 
 FinRisk97: 1=no, 2=yes
 Health2000: 0=no, 1=yes
@@ -853,32 +820,31 @@ h2000_summary_final <- h2000_summary_final %>%
 As decided previously, we remove data according the following criteria:
 
 * BMI > 50
-* CRP > 30
 * Ferritin > 400 
 
-This amounts to `r cohort_name %>% filter(BMI >= 50 | CRP >= 30 | Ferritin >= 400) %>% nrow()` participants that are removed. 
-  * FinDonor: 12 `r blood_data_summary_final %>% filter(BMI >= 50 | CRP >= 30 | Ferritin >= 400) %>% nrow()`
-  * FinRisk97: 216 `r fr1997_summary_final %>% filter(BMI >= 50 | CRP >= 30 | Ferritin >= 400) %>% nrow()`
-  * Health00: 138 `r h2000_summary_final %>% filter(BMI >= 50 | CRP >= 30 | Ferritin >= 400) %>% nrow()`
-
+This amounts to "cohort_name %>% filter(BMI >= 50 | CRP >= 30 | Ferritin >= 400) %>% nrow()" participants that are removed. 
+  * FinDonor: `r blood_data_summary_final %>% filter(BMI >= 50 | Ferritin >= 400) %>% nrow()`
+  * FinRisk97: `r fr1997_summary_final %>% filter(BMI >= 50 | Ferritin >= 400) %>% nrow()`
+  * Health00: `r h2000_summary_final %>% filter(BMI >= 50 | Ferritin >= 400) %>% nrow()`
+  
 ```{r}
 # FinDonor
-fr1997_summary_final <- fr1997_summary_final %>% 
-   filter(BMI < 50 & CRP < 30 & Ferritin < 400)
+blood_data_summary_final <- blood_data_summary_final %>% 
+   filter(BMI < 50 & Ferritin < 400)
 
 # FinRisk97
 fr1997_summary_final <- fr1997_summary_final %>% 
-   filter(BMI < 50 & CRP < 30 & Ferritin < 400)
+   filter(BMI < 50 & Ferritin < 400)
 
 #Health2000
-h2000_summary_final <- h2000_summary_final %>% 
-   filter(BMI < 50 & CRP < 30 & Ferritin < 400)
+h2000_summary_final_test <- h2000_summary_final %>% 
+   filter(BMI < 50 & Ferritin < 400)
 
 ```
 
 ## Final group N for the three cohorts
 
-```{r}
+```{r, warning=FALSE}
 # FinDonor
 blood_data_summary_final %>% 
    mutate(Group = dplyr::recode(Group, Pre_menopause_women = "Pre-menopausal women",
@@ -1030,7 +996,7 @@ summary_all_cohorts <- bind_rows(blood_data_summary_final, fr1997_summary_final,
 
 ## Final group N for the summarized table
 
-```{r}
+```{r, warning=FALSE}
 summary_all_cohorts %>% 
    mutate(Group = dplyr::recode(Group, Pre_menopause_women = "Pre-menopausal women",
          Post_menopause_women = "Post-menopausal women")) %>% 
@@ -1061,7 +1027,7 @@ regression_cohorts <- summary_all_cohorts %>%
 Save table
 
 ```{r}
-write.table(regression_cohorts, file = paste0("../results/regressioncohorts",gsub("-","",as.Date(Sys.time())),".txt"))
+write.table(regression_cohorts, file = paste0("../results/regressioncohorts",".txt"))
 
 save(regression_cohorts, file = "../data/ID_data_regression_cohorts.rdata")
 ```
@@ -1089,13 +1055,13 @@ We center all variables entered as continuous.
 ## Premenopausal women
 
 
-```{r}
+```{r, warning=FALSE}
 
 test_data_pre_women <- regression_cohorts %>% 
   filter(Group == "Pre_menopause_women")
 
-test_data_pre_women %>% 
-  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
+test_data_pre_women <- test_data_pre_women %>% 
+  dplyr::select(ID, Group, Sex, Age, donation_count, last_donation, Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, iron_complience, PreviousChildbirth, CRP, Cohort, donation_count_2, log_ferritin, log_last_donation, log_CRP, iron_deficiency) %>%
   mutate(Age = scale(Age, scale = FALSE)[,1],
          log_CRP = scale(log_CRP, scale = FALSE)[,1],
          donation_count = scale(donation_count, scale = FALSE)[,1],
@@ -1103,25 +1069,24 @@ test_data_pre_women %>%
          BMI = scale(BMI, scale = FALSE)[,1],
          donation_count_2 = donation_count^2) 
 
-
 ```
 
 Save table
 
 ```{r}
-write.table(test_data_pre_women, file = paste0("../results/test_data_pre_women",gsub("-","",as.Date(Sys.time())),".txt"))
+write.table(test_data_pre_women, file = paste0("../results/test_data_pre_women",".txt"))
 ```
 
 
 ## Postmenopausal women
 
-```{r}
+```{r, warning=FALSE}
 
 test_data_post_women <- regression_cohorts %>% 
   filter(Group == "Post_menopause_women") 
 
-test_data_post_women %>% 
-  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
+test_data_post_women <- test_data_post_women %>% 
+  dplyr::select(ID, Group, Sex, Age, donation_count, last_donation, Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, iron_complience, PreviousChildbirth, CRP, Cohort, donation_count_2, log_ferritin, log_last_donation, log_CRP, iron_deficiency) %>%
   mutate(Age = scale(Age, scale = FALSE)[,1],
          log_CRP = scale(log_CRP, scale = FALSE)[,1],
          donation_count = scale(donation_count, scale = FALSE)[,1],
@@ -1134,20 +1099,20 @@ test_data_post_women %>%
 Save table
 
 ```{r}
-write.table(test_data_post_women, file = paste0("../results/test_data_post_women",gsub("-","",as.Date(Sys.time())),".txt"))
+write.table(test_data_post_women, file = paste0("../results/test_data_post_women",".txt"))
 ```
 
 
 ## Men
 
 
-```{r}
+```{r, warning=FALSE}
 
 test_data_men <- regression_cohorts %>% 
   filter(Group == "Men") 
 
-test_data_men %>% 
-  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
+test_data_men <- test_data_men %>% 
+  dplyr::select(ID, Group, Sex, Age, donation_count, last_donation, Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, iron_complience, PreviousChildbirth, CRP, Cohort, donation_count_2, log_ferritin, log_last_donation, log_CRP, iron_deficiency) %>%
   mutate(Age = scale(Age, scale = FALSE)[,1],
          log_CRP = scale(log_CRP, scale = FALSE)[,1],
          donation_count = scale(donation_count, scale = FALSE)[,1],
@@ -1161,7 +1126,7 @@ test_data_men %>%
 Save table
 
 ```{r}
-write.table(test_data_men, file = paste0("../results/test_data_men",gsub("-","",as.Date(Sys.time())),".txt"))
+write.table(test_data_men, file = paste0("../results/test_data_men",".txt"))
 ```
 
 
@@ -1169,7 +1134,7 @@ write.table(test_data_men, file = paste0("../results/test_data_men",gsub("-","",
 
 ### Correlograms
 
-```{r}
+```{r, warning=FALSE}
 # Premenopausal women
 ggpairs(test_data_pre_women, 
         columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
@@ -1198,7 +1163,7 @@ ggpairs(test_data_men,
 
 ```
 
-```{r}
+```{r, warning=FALSE}
 #same as above, cohorts separated 
 
 # Premenopausal women
@@ -1231,10 +1196,10 @@ ggtitle("Men")
 ```
 
 
-```{r}
+```{r, warning=FALSE}
 
 ggpairs(test_data_pre_women, ggplot2::aes(colour = Cohort, alpha = 0.5),
-        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
+        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI", "Menstruation"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE) + 
@@ -1253,295 +1218,5 @@ ggpairs(test_data_men, ggplot2::aes(colour = Cohort, alpha = 0.5),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE) + 
 ggtitle("Men")
-
-```
-
-
-#### Correlograms by cohort
-
-##### Premenopausal women 
-
-###### FinDonor
-
-```{r}
-test_data_pre_women_findonor <- regression_cohorts %>% 
-  filter(Group == "Pre_menopause_women" & Cohort == "FINDONOR") 
-
-test_data_pre_women_findonor %>% 
-  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
-  mutate(Age = scale(Age, scale = FALSE)[,1],
-         log_CRP = scale(log_CRP, scale = FALSE)[,1],
-         donation_count = scale(donation_count, scale = FALSE)[,1],
-         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
-         BMI = scale(BMI, scale = FALSE)[,1],
-         donation_count_2 = donation_count^2)
-
-ggpairs(test_data_pre_women_findonor, 
-        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
-
-ggpairs(test_data_pre_women_findonor, 
-        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
-                    "log_last_donation"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
-
-
-```
-
-###### FinRisk97
-
-```{r}
-test_data_pre_women_fr1997 <- regression_cohorts %>% 
-  filter(Group == "Pre_menopause_women" & Cohort == "FINRISK97") 
-
-test_data_pre_women_fr1997 %>% 
-  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
-  mutate(Age = scale(Age, scale = FALSE)[,1],
-         log_CRP = scale(log_CRP, scale = FALSE)[,1],
-         donation_count = scale(donation_count, scale = FALSE)[,1],
-         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
-         BMI = scale(BMI, scale = FALSE)[,1],
-         donation_count_2 = donation_count^2)
-
-ggpairs(test_data_pre_women_fr1997, 
-        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
-                    "log_last_donation"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
-
-ggpairs(test_data_pre_women_fr1997, 
-        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
-
-
-```
-
-###### Health2000
-
-```{r}
-test_data_pre_women_h2000 <- regression_cohorts %>% 
-  filter(Group == "Pre_menopause_women" & Cohort == "HEALTH00") 
-
-test_data_pre_women_h2000 %>% 
-  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
-  mutate(Age = scale(Age, scale = FALSE)[,1],
-         log_CRP = scale(log_CRP, scale = FALSE)[,1],
-         donation_count = scale(donation_count, scale = FALSE)[,1],
-         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
-         BMI = scale(BMI, scale = FALSE)[,1],
-         donation_count_2 = donation_count^2)
-
-ggpairs(test_data_pre_women_h2000, 
-        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
-                    "log_last_donation"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
-
-ggpairs(test_data_pre_women_h2000, 
-        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth", "Smoking", "iron_complience", "BMI"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
-
-
-```
-
-
-
-##### Postmenopausal women 
-
-###### FinDonor
-
-```{r}
-test_data_post_women_findonor <- regression_cohorts %>% 
-  filter(Group == "Post_menopause_women" & Cohort == "FINDONOR") 
-
-test_data_post_women_findonor %>% 
-  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
-  mutate(Age = scale(Age, scale = FALSE)[,1],
-         log_CRP = scale(log_CRP, scale = FALSE)[,1],
-         donation_count = scale(donation_count, scale = FALSE)[,1],
-         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
-         BMI = scale(BMI, scale = FALSE)[,1],
-         donation_count_2 = donation_count^2)
-
-ggpairs(test_data_post_women_findonor, 
-        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
-
-ggpairs(test_data_post_women_findonor, 
-        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
-                    "log_last_donation"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
-
-
-```
-
-###### FinRisk97
-
-```{r}
-test_data_post_women_fr1997 <- regression_cohorts %>% 
-  filter(Group == "Post_menopause_women" & Cohort == "FINRISK97") 
-
-test_data_post_women_fr1997 %>% 
-  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
-  mutate(Age = scale(Age, scale = FALSE)[,1],
-         log_CRP = scale(log_CRP, scale = FALSE)[,1],
-         donation_count = scale(donation_count, scale = FALSE)[,1],
-         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
-         BMI = scale(BMI, scale = FALSE)[,1],
-         donation_count_2 = donation_count^2)
-
-ggpairs(test_data_post_women_fr1997, 
-        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
-                    "log_last_donation"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
-
-ggpairs(test_data_post_women_fr1997, 
-        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
-
-
-```
-
-###### Health2000
-
-```{r}
-test_data_post_women_h2000 <- regression_cohorts %>% 
-  filter(Group == "Post_menopause_women" & Cohort == "HEALTH00") 
-
-test_data_post_women_h2000 %>% 
-  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
-  mutate(Age = scale(Age, scale = FALSE)[,1],
-         log_CRP = scale(log_CRP, scale = FALSE)[,1],
-         donation_count = scale(donation_count, scale = FALSE)[,1],
-         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
-         BMI = scale(BMI, scale = FALSE)[,1],
-         donation_count_2 = donation_count^2)
-
-ggpairs(test_data_post_women_h2000, 
-        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
-                    "log_last_donation"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
-
-ggpairs(test_data_post_women_h2000, 
-        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
-
-
-```
-
-##### Men 
-
-###### FinDonor
-
-```{r}
-test_data_men_findonor <- regression_cohorts %>% 
-  filter(Group == "Men" & Cohort == "FINDONOR") 
-
-test_data_men_findonor %>% 
-  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
-  mutate(Age = scale(Age, scale = FALSE)[,1],
-         log_CRP = scale(log_CRP, scale = FALSE)[,1],
-         donation_count = scale(donation_count, scale = FALSE)[,1],
-         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
-         BMI = scale(BMI, scale = FALSE)[,1],
-         donation_count_2 = donation_count^2)
-
-ggpairs(test_data_men_findonor, 
-        columns = c("log_ferritin", "iron_deficiency", "RedMeat_n", "Smoking", "iron_complience", "BMI"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
-
-ggpairs(test_data_men_findonor, 
-        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
-                    "log_last_donation"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
-
-
-```
-
-###### FinRisk97
-
-```{r}
-test_data_men_fr1997 <- regression_cohorts %>% 
-  filter(Group == "Men" & Cohort == "FINRISK97") 
-
-test_data_men_fr1997 %>% 
-  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
-  mutate(Age = scale(Age, scale = FALSE)[,1],
-         log_CRP = scale(log_CRP, scale = FALSE)[,1],
-         donation_count = scale(donation_count, scale = FALSE)[,1],
-         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
-         BMI = scale(BMI, scale = FALSE)[,1],
-         donation_count_2 = donation_count^2)
-
-ggpairs(test_data_men_fr1997, 
-        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
-                    "log_last_donation"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
-
-ggpairs(test_data_men_fr1997, 
-        columns = c("log_ferritin", "iron_deficiency",  "RedMeat_n", "Smoking", "iron_complience", "BMI"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
-
-
-```
-
-###### Health2000
-
-```{r}
-test_data_men_h2000 <- regression_cohorts %>% 
-  filter(Group == "Men" & Cohort == "HEALTH00") 
-
-test_data_men_h2000 %>% 
-  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation) %>%
-  mutate(Age = scale(Age, scale = FALSE)[,1],
-         log_CRP = scale(log_CRP, scale = FALSE)[,1],
-         donation_count = scale(donation_count, scale = FALSE)[,1],
-         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
-         BMI = scale(BMI, scale = FALSE)[,1],
-         donation_count_2 = donation_count^2)
-
-ggpairs(test_data_men_h2000, 
-        columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
-                    "log_last_donation"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
-
-ggpairs(test_data_men_h2000, 
-        columns = c("log_ferritin", "iron_deficiency", "Smoking", "iron_complience", "BMI"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)
-
 
 ```

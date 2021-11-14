@@ -328,7 +328,10 @@ NA:s in the male group (pregnancy and menstruation questions) are a problem, imp
 
 # Model using more than one variable
 
-Next let's try creating a model that uses all of the variables to predict ID. `iron_deficiency ~ .` means that we want to model ID using all of the remaining variables. 
+Next let's try creating a model that uses all of the variables to predict ID. 
+
+
+`iron_deficiency ~ .` means that we want to model ID using all of the remaining variables. --> This did not work (why?), added variables one by one.
 
 
 ```{r}
@@ -510,6 +513,9 @@ ggplot(data = predicted_ID_post, aes(x=rank, y=probability_of_ID_post)) +
 ggsave("iron_deficiency_probabilities_post.pdf")
 ```
 
+
+
+
 Diagnostics for model: 
 
 ```{r}
@@ -536,9 +542,8 @@ vif(logistic_post)
 ```
 
 
-
 ```{r}
-# liitetään takaisin yhteen kaikki kolme ryhmää (eli men, pre, post) - mitä tapahtuu menstruationille?
+# liitetään takaisin yhteen kaikki kolme ryhmää (eli men, pre, post --> regression_data_) - mitä tapahtuu menstruationille, 13 vs 14 muuttujaa?
 bind_rows()
 ```
 
@@ -549,16 +554,17 @@ https://data.princeton.edu/wws509/r/c3s1
 https://stats.stackexchange.com/questions/304833/how-to-calculate-odds-ratio-and-95-confidence-interval-for-logistic-regression
 https://www.andrewheiss.com/blog/2016/04/25/convert-logistic-regression-standard-errors-to-odds-ratios-with-r/
 
-ÄLÄ OTA TÄTÄ POIS!!!!!
 
 ```{r}
 detach("package:safeBinaryRegression", unload=TRUE)
-#safeBinaryRegression messes up booting
+#safeBinaryRegression messes up booting, this removes the package
 ```
 
-#### stop #####
 
 ## Define auxiliarry functions for bootstrapping
+
+Tässä rakennetaan mekanismejä, ei bootstrappingia 
+
 ```{r}
 
 # https://www.painblogr.org/2017-10-18-purrring-through-bootstraps.html
@@ -607,13 +613,17 @@ get_bootstrap <- function(data, nb_boot){
 ```
 
 ## Run bootstrapping
+
+Mikko auttaa tässä kohtaa
+
 ```{r}
 # Error in t.star[r, ] <- res[[r]] : 
 #   number of items to replace is not a multiple of replacement length
 #can sometimes be fixed by just adding bootstrap, but sometimes requires dropping out a variable
 
 
-get_bootstrap_coeffs <- function(regression_data, current_group, nb_boot )
+get_bootstrap_coeffs <- function(regression_data, current_group, #post_data_joku
+                                 nb_boot ) #100, tästä siis aloitetaan, sitten joku 1000
 {
 
   ## preprocess and standardize data - muuta muuttujat omiin, ei ehkä tarvii tehdä
