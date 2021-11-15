@@ -460,6 +460,17 @@ blood_data_summary_final <- blood_data_summary_final %>%
   mutate(Group = ordered(Group, levels =  c("Pre_menopause_women", "Post_menopause_women", "Men"))) 
 
 
+blood_data_summary_final_test <- blood_data_summary_final %>% 
+  mutate(Group = case_when(
+    Sex == "Men" ~ "Men", 
+    Sex == "Women" & (Menstruation == "no_period" & Age > 45) ~ "Post_menopause_women",
+    Sex == "Women" & (Menstruation == "no_period" & Age <= 45) ~ "Women_pre_menop_no_mens",
+    Sex == "Women" & (Menstruation == "irregular_period" | Menstruation == "regular_period") ~ "Pre_menopause_women",
+    TRUE ~ "NA")) %>% 
+  filter(Group != "Women_pre_menop_no_mens" & Group != "NA") %>% 
+  droplevels() %>% 
+  mutate(Group = ordered(Group, levels =  c("Pre_menopause_women", "Post_menopause_women", "Men"))) 
+
 #FINRISK97:
 ## We define the women's groups and drop n/a:s: 
 fr1997_summary_final <- fr1997_summary_final %>% 
@@ -1220,3 +1231,4 @@ ggpairs(test_data_men, ggplot2::aes(colour = Cohort, alpha = 0.5),
 ggtitle("Men")
 
 ```
+    
