@@ -15,6 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # echo "rmarkdown::render('low_ferritin_model_bayes.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/low_ferritin_model_bayes.pdf')" | R --slave
 library(tidyverse)
 library(brms)
+library(bayesplot)
 ```
 
 
@@ -31,8 +32,9 @@ all_cohorts <- regression_cohorts
 ```
 
 
-## All cohorts 
+# All cohorts together 
 
+## Data
 ```{r}
 # men
 ## menstruation variable removed 
@@ -71,6 +73,9 @@ regression_data_post <- all_cohorts %>%
 
 
 ```
+
+## Models 
+
 
 
 ```{r men}
@@ -142,5 +147,193 @@ logistic_post_b <- brm(iron_deficiency ~ Age +
 )
 
 summary(logistic_post_b)
+```
+
+## Diagnostics
+
+### Trace
+
+```{r , message=FALSE}
+mcmc_plot(logistic_men_b, type = "trace")
+```
+
+```{r , message=FALSE}
+mcmc_plot(logistic_pre_b, type = "trace")
+```
+
+```{r , message=FALSE}
+mcmc_plot(logistic_post_b, type = "trace")
+```
+
+Chains do not seem to get stuck.
+
+### ACF bars
+
+```{r}
+mcmc_plot(logistic_men_b, type = "acf_bar")
+```
+
+
+```{r}
+mcmc_plot(logistic_pre_b, type = "acf_bar")
+```
+
+
+```{r}
+mcmc_plot(logistic_post_b, type = "acf_bar")
+```
+
+Autocorrelation drops nicely.
+
+### Rhat
+
+```{r}
+mcmc_plot(logistic_men_b, type = "rhat")
+```
+
+```{r}
+mcmc_plot(logistic_pre_b, type = "rhat")
+```
+
+```{r}
+mcmc_plot(logistic_post_b, type = "rhat")
+```
+https://mc-stan.org/rstan/reference/Rhat.html
+
+
+"The Rhat function produces R-hat convergence diagnostic, which compares the between- and within-chain estimates for model parameters and other univariate quantities of interest. If chains have not mixed well (ie, the between- and within-chain estimates don't agree), R-hat is larger than 1. We recommend running at least four chains by default and only using the sample if R-hat is less than 1.05."
+
+## Forest plots
+
+```{r , message=FALSE, warning=FALSE}
+p <- mcmc_plot(logistic_men_b, 
+         type = "areas",
+         prob = 0.95,
+         transformations = "exp") +
+  geom_vline(xintercept = 1, color = "grey")
+
+p <- p + scale_x_log10()
+#Ferritin needs to be removed
+# plot.OR<-  tidy_logit_pre_menop_women %>%filter(!term=="log_Ferritin_beginning") %>%  dplyr::select(OR) %>% mutate(y=rev(2:(nrow(tidy_logit_pre_menop_women)))) %>% bind_rows(tibble(OR=NA,y=1 ))
+# p <- p + geom_point(aes(y=y,x=OR),data=plot.OR, col="red")
+p
+```
+
+
+```{r , message=FALSE, warning=FALSE}
+p <- mcmc_plot(logistic_pre_b, 
+         type = "areas",
+         prob=0.95,
+         prob_est="median",
+         transformations = "exp"
+        ) +
+  geom_vline(xintercept = 1, color = "grey")
+
+p <- p + scale_x_log10()
+p
+```
+
+
+```{r , message=FALSE, warning=FALSE}
+p <- mcmc_plot(logistic_post_b, 
+         type = "areas",
+         prob = 0.95,
+         transformations = "exp") +
+  geom_vline(xintercept = 1, color = "grey")
+
+p <- p + scale_x_log10()
+#Ferritin needs to be removed
+# plot.OR<-  tidy_logit_pre_menop_women %>%filter(!term=="log_Ferritin_beginning") %>%  dplyr::select(OR) %>% mutate(y=rev(2:(nrow(tidy_logit_pre_menop_women)))) %>% bind_rows(tibble(OR=NA,y=1 ))
+# p <- p + geom_point(aes(y=y,x=OR),data=plot.OR, col="red")
+p
+```
+
+### All groups together
+
+```{r }
+
+intervals_men <- mcmc_intervals_data(
+  logistic_men_b,
+  prob=0.9,
+  prob_outer = 0.95,
+  point_est = "median",
+  transformations = "exp"
+  ) %>% mutate(Group='Men')
+
+intervals_pre <- mcmc_intervals_data(
+  logistic_pre_b,
+  prob=0.9,
+  prob_outer = 0.95,
+  point_est = "median",
+  transformations = "exp"
+  ) %>% mutate(Group='Pre') %>% 
+  arrange(m) # how to order the variables?
+
+intervals_post <- mcmc_intervals_data(
+  logistic_post_b,
+  prob=0.9,
+  prob_outer = 0.95,
+  point_est = "median",
+  transformations = "exp"
+  ) %>% mutate(Group='Post')
+
+intervals_combined <- rbind(intervals_pre,intervals_post,intervals_men) %>% 
+  filter(! (parameter == 'exp(b_Intercept)' | parameter == 'exp(lp__)')) %>% 
+  mutate(parameter = gsub("\\)","",gsub("exp\\(b_","",parameter))) #%>% 
+  #arrange(m)
+
+
+```
+
+
+```{r , warning=FALSE}
+
+orlower <- 1/10
+orupper <- 10
+
+# Truncate ORs for plotting
+temp <- intervals_combined %>% 
+  mutate(
+    ll = case_when(
+      ll < orlower ~ orlower,
+      TRUE ~ ll
+    ),
+    hh = case_when(
+      hh > orupper ~ orupper,
+      TRUE ~ hh
+    )
+  )
+
+theme_set(bayesplot::theme_default())
+pos <- position_nudge(y=as.numeric(as.factor(temp$Group))/10 -0.1) 
+
+p <- ggplot(temp, aes(x = m, y = parameter, color = Group)) + 
+  geom_point(position = pos) +
+  geom_linerange(aes(xmin = ll, xmax = hh), position = pos) +
+ scale_color_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
+                     limits = c("Men",  "Post","Pre" )) +
+     scale_fill_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
+                     limits = c("Men",  "Post","Pre" )) +
+ scale_shape_manual(values = c(1,16)) +
+scale_x_log10(limits=c(orlower,orupper))  + #how to get the lines that drop out of the visible?  
+  geom_vline(xintercept = 1 , color = "grey", linetype = "dotted",
+             size = 1)
+
+p
+
+
+```
+
+```{r}
+
+
+ggplot2::ggsave(filename = "../results/forest_all_cohorts_b.pdf",
+                plot = p,
+                width = 35,
+                height = 18,
+                dpi = 600,
+                units = "cm")
+
+
 ```
 
