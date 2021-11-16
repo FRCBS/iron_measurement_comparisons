@@ -1,0 +1,146 @@
+---
+title: "Low ferritin model"
+author: "Mikko Arvas"
+date: "15.22.2021"
+output: pdf_document
+
+---
+
+
+# Summary
+
+
+```{r setup, , message = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# echo "rmarkdown::render('low_ferritin_model_bayes.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/low_ferritin_model_bayes.pdf')" | R --slave
+library(tidyverse)
+library(brms)
+```
+
+
+
+PART 2: BAYESIAN LOGISTIC REGRESSION
+
+# Data loading and preparation 
+
+Load data
+
+```{r}
+load("../data/ID_data_regression_cohorts.rdata")
+all_cohorts <- regression_cohorts
+```
+
+
+## All cohorts 
+
+```{r}
+# men
+## menstruation variable removed 
+regression_data_men <- all_cohorts %>% 
+  filter(Group == "Men") %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, Cohort, iron_deficiency, Smoking, iron_complience, Group) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2) 
+
+# premenopausal women
+regression_data_pre <- all_cohorts %>% 
+  filter(Group == "Pre_menopause_women") %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, Menstruation, Cohort, iron_deficiency, Smoking, iron_complience, Group) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2) 
+
+# postmenopausal womem 
+## menstruation variable removed 
+regression_data_post <- all_cohorts %>% 
+  filter(Group == "Post_menopause_women") %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, Cohort, iron_deficiency, Smoking, iron_complience, Group) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2) 
+
+
+```
+
+
+```{r men}
+#men
+file <- "../results/bmodels/logit_men_b"
+
+logistic_men_b <- brm(iron_deficiency ~ 
+                        Age + 
+                        BMI + 
+                        Smoking + 
+                        iron_complience + 
+                        donation_count_2 + 
+                        log_last_donation + 
+                        log_CRP +
+                        Cohort, 
+                      data = regression_data_men, 
+                      family = bernoulli(),
+                      file=file, 
+                      cores = 4,
+                      iter= 10000
+)
+
+summary(logistic_men_b)
+
+```
+
+```{r  pre}
+# premenopausal women
+file <- "../results/bmodels/logit_pre_b"
+
+logistic_pre_b <- brm(iron_deficiency ~ Age + 
+                        BMI + 
+                        Smoking + 
+                        iron_complience + 
+                        donation_count_2 + 
+                        log_last_donation + 
+                        log_CRP +
+                        Cohort + 
+                        Menstruation, 
+                      data = regression_data_pre,
+                      family = bernoulli(),
+                      file=file, 
+                      cores = 4,
+                      iter= 10000
+)
+
+summary(logistic_pre_b)
+
+
+```
+
+```{r  post}
+# postmenopausal women
+file <- "../results/bmodels/logit_post_b"
+
+logistic_post_b <- brm(iron_deficiency ~ Age + 
+                       BMI + 
+                       Smoking + 
+                       iron_complience + 
+                       donation_count_2 + 
+                       log_last_donation + 
+                       log_CRP +
+                       Cohort, 
+                     data = regression_data_post, 
+                     family = bernoulli(),
+                     file=file, 
+                     cores = 4,
+                     iter= 10000
+)
+
+summary(logistic_post_b)
+```
+
