@@ -304,20 +304,35 @@ temp <- intervals_combined %>%
     )
   )
 
-theme_set(bayesplot::theme_default())
-pos <- position_nudge(y=as.numeric(as.factor(temp$Group))/10 -0.1) 
+#theme_set(bayesplot::theme_default())
+pos <- position_nudge(y=as.numeric(as.factor(temp$Group))/5 -0.1) 
 
 p <- ggplot(temp, aes(x = m, y = parameter, color = Group)) + 
-  geom_point(position = pos) +
-  geom_linerange(aes(xmin = ll, xmax = hh), position = pos) +
- scale_color_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
-                     limits = c("Men",  "Post","Pre" )) +
-     scale_fill_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
-                     limits = c("Men",  "Post","Pre" )) +
- scale_shape_manual(values = c(1,16)) +
-scale_x_log10(limits=c(orlower,orupper))  + #how to get the lines that drop out of the visible?  
+  geom_point(position = pos,
+             size=4) +
+  geom_linerange(aes(xmin = ll, xmax = hh), 
+                 position = pos,
+                 size = 1, 
+                 linetype = 1
+                 ) +
+  scale_color_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
+                     limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
+  scale_fill_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
+                    limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
+  scale_shape_manual(values = c(1,16)) +
+  scale_x_log10(limits=c(orlower,orupper))  + #how to get the lines that drop out of the visible?  
   geom_vline(xintercept = 1 , color = "grey", linetype = "dotted",
-             size = 1)
+             size = 1) +
+  theme(axis.title = element_text(size = 14),
+        strip.text =  element_text(size = 14),
+        legend.text = element_text(size = 12),
+        strip.background = element_rect(fill = "white"),
+        strip.background.x = element_blank(),
+        axis.text.x = element_text(size = 14),
+        axis.text.y = element_text(size = 14)
+  ) +
+  guides(shape = "none") +
+  theme_classic()
 
 p
 
@@ -327,7 +342,7 @@ p
 ```{r}
 
 
-ggplot2::ggsave(filename = "../results/forest_all_cohorts_b.pdf",
+ggplot2::ggsave(filename = "../results/figures/forest_all_cohorts_bayes.pdf",
                 plot = p,
                 width = 35,
                 height = 18,

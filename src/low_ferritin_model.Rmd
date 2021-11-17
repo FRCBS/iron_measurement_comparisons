@@ -699,75 +699,47 @@ bootstrap_Bca_CI %>%  group_by(group) %>% count()
 
 ```
 
-# Forest plots
+# Result plots
 
 ```{r}
-# "\U0394 BMI"
-
 regressor_values <- c(
- "age" = "Age",
-   "BMI_diff" = "BMI difference",
-   "donation_frequency" = "Donation frequency",
-   "Hb_beginning" = "Initial Hemoglobin",
-   "log_Ferritin_beginning" ="Initial Ferritin",
-   "starting_weight" ="Initial weight",
-   "health_very_good" ="Initial health rating \n Very good vs Satisfactory/Good",
-    "health_excellent" = "Initial health rating \n Excellent vs Satisfactory/Good",
- 
- 
- "cholesterol_dTRUE" = "Elevated cholesterol detected",
-"blood_sugar_dTRUE" = "Elevated blood sugar detected", 
-"HBP_dTRUE" = "High blood pressure detected",
-"low_hb_hist_dTRUE" = "Low haemoglobin detected",
-"iron_supp_dStable" = "FRCBS iron supplementation stable", 
-"iron_supp_dIncreased" = "FRCBS iron supplementation increased",
-"vita_multi_dStable" = "Frequency multivitamine stable",
-"vita_multi_dIncreased" = "Frequency multivitamine increased",
-#"vita_iron_dStable" = "Frequency iron supplements stable",
-#"vita_iron_dIncreased" = "Frequency iron supplements increased",
-"anti_inf_dStable" = "Frequency of anti-inflammatory stable",
-"anti_inf_dIncreased" = "Frequency of anti-inflammatory increased",
-"freq_red_meat_dStable" = "Frequency of red meat stable",
-"freq_red_meat_dIncreased" = "Frequency of red meat increased",
-"freq_fruits_dStable" = "Frequency of fruits stable",
-"freq_fruits_dIncreased" = "Frequency of fruits increased",
-"freq_juices_dStable" = "Frequency of juices stable",
-"freq_juices_dIncreased" = "Frequency of juices increased",
-"freq_wholem_dStable" = "Frequency of whole milk stable",
-"freq_wholem_dIncreased" = "Frequency of whole milk increased",
-"freq_milk_dStable" = "Frequency of milk stable",
-"freq_milk_dIncreased" = "Frequency of milk increased",
-"freq_cof_dStable" = "Frequency of coffee stable",
-"freq_cof_dIncreased"  = "Frequency of coffee increased",
-"freq_tea_dStable" = "Frequency of tea stable",
-"freq_tea_dIncreased" = "Frequency of tea increased",
-"freq_alc_dStable" = "Frequency of alcohol stable",
-"freq_alc_dIncreased" = "Frequency of alcohol increased",
-"phys_inf_dStable" = "Physical symptoms inferred stable",
-"phys_inf_dIncreased" = "Physical symptoms inferred increased",
-"phys_cond_dStable" = "Physical condition stable",
-"phys_cond_dIncreased" = "Physical condition increased",
-"act_heavy_dStable" = "Ability for heavy activity stable",
-"act_heavy_dIncreased" = "Ability for heavy activity increased",
-"day_act_dStable"  = "Typical day activity stable",
-"day_act_dIncreased" = "Typical day activity increased",
-"h_act_light_dStable"  = "Hours for light activity stable",
-"h_act_light_dIncreased"  = "Hours for light activity increased",
-"sleep_enough_dStable" = "Enough sleep stable",
-"sleep_enough_dIncreased"  = "Enough sleep increased",
-"sleep_tired_dStable" = "Tired during day stable",
-"sleep_tired_dIncreased" = "Tired during day increased",
-"freq_calm_dStable" = "Frequency of feeling calm stable",
-"freq_calm_dIncreased" =  "Frequency of feeling calm increase",
-"life_qualgood" = "Quality of life good",
-"life_qualvery_good" = "Quality of life very good",
-"employmentTRUE" = "Full time employed"
+ "Age" = "Age",
+   "log_CRP" = "log(CRP)",
+   "BMI" = "BMI",
+   "log_last_donation" = "log(days to last donation)",
+   "CohortFINRISK97" ="FINRISK97",
+   "CohortHEALTH00" ="HEALTH00",
+   "Smokingyes" ="Smoker",
+    "iron_complience" = "Iron compliance",
+    "donation_count_2" = "Donations in last 2 years",
+    "Menstruationregular_period" = "Regular periods"
 )
 ```
 
 
 
 ```{r}
+
+tidy_logit_pre_menop_women <-
+  logistic_pre %>% 
+  tidy %>% 
+  mutate(OR = exp(estimate),
+         group = "Pre_menopause_women")
+
+
+tidy_logit_post_menop_women <-
+  logistic_post %>% 
+  tidy %>% 
+  mutate(OR = exp(estimate),
+         group = "Post_menopause_women")
+
+tidy_logit_men <-
+  logistic_men %>% 
+  tidy %>% 
+  mutate(OR = exp(estimate),
+         group = "Men")
+
+
 temp <-
   tidy_logit_men %>% 
   bind_rows(tidy_logit_post_menop_women) %>% 
@@ -821,16 +793,6 @@ temp2 <-
 
 ```{r}
 bootstrap_Bca_CI <- temp
-plotdata <- bootstrap_distrib %>% 
-  mutate(regressor = plyr::revalue(regressor, regressor_values),
-  regressor = ordered(regressor,
-                  levels = as.character(regressor_values)),
-  regressor = fct_rev(regressor),
-  group = case_when(group == "Pre_menopause_women" ~ "Pre-menopausal women",
-    group == "Post_menopause_women" ~ "Post-menopausal women",
-    TRUE ~ "Men"),
-  group = ordered(group, levels = c( "Men",  "Post-menopausal women", "Pre-menopausal women" ) )) %>% 
-  mutate(OR = exp(coefficient))
 
 bootstrap_Bca_CI_2 <- temp2
 
@@ -840,79 +802,64 @@ write.csv(temp ,file = file,row.names = FALSE)
 
 ```
 
-#Small plot of filtered variables for main paper
-```{r fig1, fig.height = 10, fig.width = 15}
+## Forest
+```{r fig1, fig.height = 10, fig.width = 15 ,warning=FALSE}
 #set the forest plot OR scale lims
-orlimR <- 1000
+orlimR <- 10
 orlimL <- 1/orlimR
-pointrange2size <- 1.4
-#Filter for those that are sig in some:
-bootstrap_Bca_CI_filtered <- bootstrap_Bca_CI %>% group_by(regressor) %>% mutate(some_sig= any(is_sig)) %>% filter(some_sig == TRUE)
+#Filter for those that are sig in some: THIS DOES NOT NEED TO BE DONE
+bootstrap_Bca_CI_filtered <- bootstrap_Bca_CI %>% group_by(regressor) #%>% mutate(some_sig= any(is_sig)) %>% filter(some_sig == TRUE)
 #Set values on axes limits to facilitate plotting
 bootstrap_Bca_CI_filtered$Bca_sup[bootstrap_Bca_CI_filtered$Bca_sup > orlimR] <- orlimR
 bootstrap_Bca_CI_filtered$Bca_sup[bootstrap_Bca_CI_filtered$Bca_sup == 0] <- orlimR
 bootstrap_Bca_CI_filtered$Bca_inf[bootstrap_Bca_CI_filtered$Bca_inf < orlimL] <- orlimL
 
-#Filter for those that are sig in some:
-bootstrap_Bca_CI_filtered_2 <- bootstrap_Bca_CI_2 %>% group_by(regressor) %>% mutate(some_sig= any(is_sig)) %>% filter(some_sig == TRUE)
+#Filter for those that are sig in some: THIS DOES NOT NEED TO BE DONE
+bootstrap_Bca_CI_filtered_2 <- bootstrap_Bca_CI_2 %>% group_by(regressor) # %>% mutate(some_sig= any(is_sig)) %>% filter(some_sig == TRUE)
 #Set values on axes limits to facilitate plotting
 bootstrap_Bca_CI_filtered_2$Bca_sup[bootstrap_Bca_CI_filtered_2$Bca_sup > orlimR] <- orlimR
 bootstrap_Bca_CI_filtered_2$Bca_sup[bootstrap_Bca_CI_filtered_2$Bca_sup == 0] <- orlimR
 bootstrap_Bca_CI_filtered_2$Bca_inf[bootstrap_Bca_CI_filtered_2$Bca_inf < orlimL] <- orlimL
 
 
-plotdata_filtered <- plotdata %>% filter(plotdata$regressor %in% bootstrap_Bca_CI_filtered$regressor) 
+plotdata_filtered <- bootstrap_Bca_CI_filtered #%>% arrange(desc(O)) 
 
+pos <- position_nudge(y=as.numeric(as.factor(plotdata_filtered$group))/5 -0.1) 
 
-p  <- ggplot(aes(x = regressor, y = OR, color = group, fill = group),data = plotdata_filtered) +
-  geom_hline(yintercept = 1 , color = "grey", linetype = "dotted",
+p  <- ggplot(aes(y = regressor, x = OR, color = group, fill = group),data = plotdata_filtered) +
+  geom_vline(xintercept = 1 , color = "grey", linetype = "dotted",
              size = 1) +
-  # geom_violin(alpha = 0.15, trim = TRUE, position = position_dodge(width = 0.8), size = 0.1) +
-  geom_pointrange(data = bootstrap_Bca_CI_filtered,
-                  aes(ymin=Bca_inf, ymax = Bca_sup, shape = is_sig, color = group, fill = group),
-                  position = position_dodge(width = 0.7), size = 1, linetype = 1) +
-  # geom_pointrange(data = bootstrap_Bca_CI_filtered_2,
+  # geom_pointrange(data = bootstrap_Bca_CI_filtered,
   #                 aes(ymin=Bca_inf, ymax = Bca_sup, shape = is_sig, color = group, fill = group),
-  #                 position = position_dodge(width = 0.7), size = pointrange2size) +
-  # # geom_point(data = bootstrap_Bca_CI, 
-  #            aes(shape = is_sig, fill = group),
-  #            position = position_dodge(width = 0.8), size = 2) +
+  #                 position = position_dodge(width = 0.7), size = 1, linetype = 1) +
+  geom_linerange(data = bootstrap_Bca_CI_filtered,
+                  aes(xmin=Bca_inf, xmax = Bca_sup, color = group),
+                  position = pos
+                 , size = 1, linetype = 1) +
+   geom_point(data = bootstrap_Bca_CI,
+             aes(shape = is_sig, fill = group),
+             position = pos, 
+             size = 4
+             ) +
     scale_color_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
-                     limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
+                     limits = c("Men",  "Post-menopausal women","Pre-menopausal women" ),
+                     name="Group") +
      scale_fill_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
-                     limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
+                     limits = c("Men",  "Post-menopausal women","Pre-menopausal women" ),
+                     name="Group") +
  scale_shape_manual(values = c(1,16)) +
-  scale_y_log10(limits=c(orlimL,orlimR)) +
-  # scale_x_discrete(labels=parse(text=unique(bootstrap_Bca_CI$regressor)))
-  # ylim(1/35, 35) +
-  guides(shape = FALSE) +
+  scale_x_log10(limits=c(orlimL,orlimR)) +
+  guides(shape = "none") +
   theme_classic() +
-  # theme(legend.position = c(0.8,0.9),
-  #       legend.title = element_blank(),
-  #       legend.box = "vertical",
-  #       legend.text = element_text(size = 20),
-  #       plot.title =  element_text(size = 24,
-  #                                 hjust = 0),
-  #       panel.grid.minor.y = element_blank(),
-  #       axis.line = element_line(colour="black"),
-  #       axis.title.y = element_blank(),
-  #       axis.title.x = element_text(size = 24),
-  #       axis.text = element_text(size = 22),
-  #       panel.grid.major.y = element_blank()) +
-  coord_flip() +
-  xlab("Robust standardized coefficient") +
-  labs(title = "PREDICTORS OF WORSENED SELF-RATED HEALTH \nBETWEEN QUESTIONNAIRES",
-       subtitle = "") +
+  ylab("Coefficient") +
    theme(axis.title = element_text(size = 14),
         strip.text =  element_text(size = 14),
         legend.text = element_text(size = 12),
         strip.background = element_rect(fill = "white"),
         strip.background.x = element_blank(),
-        axis.text.y = element_text(size = 14),
-        axis.text.x = element_text(size = 14, angle = 30,hjust = 0.8),
-        plot.title =  element_text(size = 16),
-        plot.subtitle = element_text(size = 16,
-                                     hjust = 0.5))
+        axis.text.x = element_text(size = 14),
+        axis.text.y = element_text(size = 14)
+        )
 
 p
 
@@ -921,7 +868,7 @@ p
 ```{r}
 
 p <- p +   labs(title = NULL,subtitle = NULL)
-ggplot2::ggsave(filename = "../results/figures/exp_small_log_reg_results_b.pdf",
+ggplot2::ggsave(filename = "../results/figures/forest_all_cohorts_boot.pdf",
                 plot= p,
 # do not change these rather just scale the ready pdf later if you need.
        width = 35,
@@ -932,172 +879,10 @@ ggplot2::ggsave(filename = "../results/figures/exp_small_log_reg_results_b.pdf",
 ```
 
 
-#Big plot of all variables for supplement
-```{r fig2, fig.height = 40, fig.width = 15}
-
-bootstrap_Bca_CI$Bca_sup[bootstrap_Bca_CI$Bca_sup > orlimR] <- orlimR
-bootstrap_Bca_CI$Bca_sup[bootstrap_Bca_CI$Bca_sup == 0] <- orlimR
-bootstrap_Bca_CI$Bca_inf[bootstrap_Bca_CI$Bca_inf < orlimL] <- orlimL
-
-#Set values on axes limits to facilitate plotting
-bootstrap_Bca_CI_2$Bca_sup[bootstrap_Bca_CI_2$Bca_sup > orlimR] <- orlimR
-bootstrap_Bca_CI_2$Bca_sup[bootstrap_Bca_CI_2$Bca_sup == 0] <- orlimR
-bootstrap_Bca_CI_2$Bca_inf[bootstrap_Bca_CI_2$Bca_inf < orlimL] <- orlimL
 
 
-p2  <- ggplot(aes(x = regressor, y = OR, color = group, fill = group),data = plotdata) +
-  geom_hline(yintercept = 1 , color = "grey", linetype = "dotted",
-             size = 1) +
-  # geom_violin(alpha = 0.15, trim = TRUE, position = position_dodge(width = 0.8), size = 0.1) +
-  geom_pointrange(data = bootstrap_Bca_CI,
-                  aes(ymin=Bca_inf, ymax = Bca_sup, shape = is_sig, color = group, fill = group),
-                  position = position_dodge(width = 0.7), size = 1, linetype = 2) +
-  geom_pointrange(data = bootstrap_Bca_CI_2,
-                  aes(ymin=Bca_inf, ymax = Bca_sup, shape = is_sig, color = group, fill = group),
-                  position = position_dodge(width = 0.7), size = pointrange2size) +
-  # # geom_point(data = bootstrap_Bca_CI, 
-  #            aes(shape = is_sig, fill = group),
-  #            position = position_dodge(width = 0.8), size = 2) +
-    scale_color_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
-                     limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
-     scale_fill_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
-                     limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
- scale_shape_manual(values = c(1,16)) +
-  scale_y_log10(limits=c(orlimL,orlimR)) +
-  # scale_x_discrete(labels=parse(text=unique(bootstrap_Bca_CI$regressor)))
-  # ylim(1/35, 35) +
-  guides(shape = FALSE) +
-  theme_classic() +
-  # theme(legend.position = c(0.8,0.9),
-  #       legend.title = element_blank(),
-  #       legend.box = "vertical",
-  #       legend.text = element_text(size = 20),
-  #       plot.title =  element_text(size = 24,
-  #                                 hjust = 0),
-  #       panel.grid.minor.y = element_blank(),
-  #       axis.line = element_line(colour="black"),
-  #       axis.title.y = element_blank(),
-  #       axis.title.x = element_text(size = 24),
-  #       axis.text = element_text(size = 22),
-  #       panel.grid.major.y = element_blank()) +
-  coord_flip() +
-  xlab("Robust standardized coefficient") +
-  labs(title = "PREDICTORS OF WORSENED SELF-RATED HEALTH \nBETWEEN QUESTIONNAIRES",
-       subtitle = "") +
-   theme(axis.title = element_text(size = 14),
-        strip.text =  element_text(size = 14),
-        legend.text = element_text(size = 12),
-        strip.background = element_rect(fill = "white"),
-        strip.background.x = element_blank(),
-        axis.text.y = element_text(size = 14),
-        axis.text.x = element_text(size = 14, angle = 30,hjust = 0.8),
-        plot.title =  element_text(size = 16),
-        plot.subtitle = element_text(size = 16,
-                                     hjust = 0.5))
-
-p2
-```
-
-
-
-```{r}
-p2 <- p2 +   labs(title = NULL,subtitle = NULL)
-ggplot2::ggsave(filename = "../results/figures/exp_big_log_reg_results_b.pdf",
-                plot= p2,
-       width = 35,
-       height = 55,
-       dpi = 600,
-       units = "cm")
-
-```
 
 
 #Separate plots for individual variables
-
-```{r}
-fig.width=15
-fig.height=13
-#Load questionnaire data
-load(file = "../data/final_data.rdata") 
-final_data <- data
-
-```
-
-## Change in physical condition color
-```{r}
-
-pdata <- final_data %>% 
-  dplyr::select(donor, group, health, questionnaire) %>% 
-  drop_na(group) %>% 
-  filter( group != "Women_pre_menop_no_mens") %>% 
-  spread(key = questionnaire, value = health) %>% 
-  filter(First != "NA" & Second != "NA") %>%  
-  mutate(Difference = case_when(First < Second ~ "Improved",
-                                First == Second ~ "Stable",
-                                TRUE ~ "Worsened")) %>% 
-  inner_join(regression_data, by = c("donor", "group")) %>% 
-  mutate(group = case_when(group == "Pre_menopause_women" ~ "Pre-menopausal \n women",
-                           group == "Post_menopause_women" ~ "Post-menopausal \n women",
-                           TRUE ~ "Men"),
-         group = ordered(group, levels = c(  "Men", "Post-menopausal \n women", "Pre-menopausal \n women") ))
- 
-p <- ggplot(aes(x= phys_cond_d , fill = group), data=pdata) +
-  # geom_hline(yintercept = 15, color = "red", linetype = 3)
-  geom_bar()+
-  #geom_boxplot(outlier.alpha = 0) +
-  #geom_beeswarm(alpha = 0.5, shape = 1) +
-  # scale_y_log10() +
-  facet_grid(group ~ Difference,scales="free_y") +
-  scale_fill_manual(values = c( "#ff85a2",  "#de2d26","#00BFFF" ),
-                    limits = c("Pre-menopausal \n women", "Post-menopausal \n women","Men" )) +
-  theme_bw() +
-  theme(legend.position = "none") +
-  ggtitle("Evolution of self-rated health") +
-  xlab("Change in physical condition") +
-  ylab("Count") +
-  geom_text(stat='count', aes(label=..count..),color="black", vjust=1)  
-#scale_y_log10() 
-
-
-
-ggplot2::ggsave(plot=p,filename = "../results/figures/exp_phys_cond_c.pdf",
-       width = fig.width,
-       height = fig.height,
-       dpi = 600,
-       units = "cm")
-
-p
-```
-
-
-
-
-## Quality of life
-```{r}
-
-p <- ggplot(aes(x= life_qual), data=pdata) +
-  # geom_hline(yintercept = 15, color = "red", linetype = 3)
-  geom_bar(aes(fill=group))+
-  #geom_boxplot(outlier.alpha = 0) +
-  #geom_beeswarm(alpha = 0.5, shape = 1) +
-  # scale_y_log10() +
-  facet_grid(group ~ Difference,scales="free_y") +
-  theme_bw() +
-  theme(legend.position = "none") +
-  ggtitle("Evolution of self-rated health")+
-  xlab("Quality of life") +
-  ylab("Count") +
-  geom_text(stat='count', aes(label=..count..),color="black", vjust=1) +
-  scale_fill_manual(values = c( "#ff85a2",  "#de2d26","#00BFFF" ),
-                     limits = c("Pre-menopausal \n women", "Post-menopausal \n women","Men" ))
-
-ggplot2::ggsave(plot=p,filename = "../results/figures/exp_life_qual_c.pdf",
-       width = fig.width,
-       height = fig.height,
-       dpi = 600,
-       units = "cm")
-
-p
-```
 
 
