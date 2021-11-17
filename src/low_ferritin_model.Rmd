@@ -34,7 +34,13 @@ Load data
 ```{r}
 load("../data/ID_data_regression_cohorts.rdata")
 all_cohorts <- regression_cohorts
+
+all_cohorts %>% summarise_all(funs(sum(is.na(.)))) %>% 
+  pivot_longer(everything()) %>% filter(value > 0)
+
 ```
+
+
 
 ## Percentage of ID, all cohorts
 
@@ -128,11 +134,12 @@ We center all variables entered as continuous.
 #######################################################################################################################################
 ** POISTA TÄMÄ KOHTA ENNEN VERTAILUA NL-KOHORTTIVERTAILUA, HEILTÄ PUUTTUU CRP DATA. SÄILYTÄ JOS SAADAAN CRP DATAA UUDESTA KOHORTISTA ** 
 
-We are missing CRP data from `r all_cohorts %>% filter(is.na(CRP)) %>% nrow()`. These will need to be removed. 
+We are missing CRP data from `r all_cohorts %>% filter(is.na(CRP)) %>% filter(! CRP >= 30) %>% nrow()`. These will need to be removed. 
 
 ```{r}
 all_cohorts <- all_cohorts %>% 
-  filter(!is.na(CRP))
+  filter(!is.na(CRP)) %>% 
+  filter(! CRP >= 30)
 ```
 
 *** "POISTA TÄMÄ KOHTA" LOPPUU ***
@@ -370,7 +377,7 @@ ggplot(data = predicted_ID_men, aes(x=rank, y=probability_of_ID_men)) +
   xlab("Index") + 
   ylab("Predicted probability of iron deficiency, men") 
 
-ggsave("iron_deficiency_probabilities_men.pdf")
+ggsave("../results/figures/iron_deficiency_probabilities_men.pdf")
 ```
 
 add below each plot some interpretation of what it might mean, is it good or bad?
@@ -383,7 +390,7 @@ ggplot(data = predicted_ID_pre, aes(x=rank, y=probability_of_ID_pre)) +
   xlab("Index") + 
   ylab("Predicted probability of iron deficiency, premenopausal women") 
 
-ggsave("iron_deficiency_probabilities_pre.pdf")
+ggsave("../results/figures/iron_deficiency_probabilities_pre.pdf")
 ```
 
 ```{r , message=FALSE}
@@ -393,7 +400,7 @@ ggplot(data = predicted_ID_post, aes(x=rank, y=probability_of_ID_post)) +
   xlab("Index") + 
   ylab("Predicted probability of iron deficiency, postmenopausal women") 
 
-ggsave("iron_deficiency_probabilities_post.pdf")
+ggsave("../results/figures/iron_deficiency_probabilities_post.pdf")
 ```
 
 
@@ -887,4 +894,73 @@ ggplot2::ggsave(filename = "../results/figures/forest_all_cohorts_boot.pdf",
 
 #Separate plots for individual variables
 
+
+```{r}
+file <- "../results/summary_all_cohorts.rdata"
+load(file)
+
+summary_all_cohorts <- summary_all_cohorts %>% 
+  rename(donation_count = TwoYearsFromStartCount_FB,
+         last_donation = DaysToPreviousFB,
+         iron_complience = IronComplienceNumeric) %>% 
+    filter(!is.na(CRP)) %>%  # Ploting the same persons that we used in the model
+    filter(!CRP >= 30)
+
+summary(summary_all_cohorts)
+```
+
+## Ferritin and menstruation
+
+```{r , message=FALSE}
+
+temp <- summary_all_cohorts %>% 
+  filter(Group == 'Pre_menopause_women') %>%
+  mutate( iron_deficiency = Ferritin < 15) %>% 
+  group_by(iron_deficiency,Menstruation,Cohort) %>% 
+  summarise(n=n()
+            ) %>% 
+  group_by(Cohort) %>% 
+  summarise(
+    iron_deficiency = iron_deficiency,
+    Menstruation = Menstruation,
+    Freq = paste(round(n / sum(n),2) *100, "%"),
+    N = n
+            ) %>% 
+  mutate(
+    x = c(150,5)[as.numeric(as.factor(iron_deficiency))],
+    y =  c(20,100)[as.numeric(as.factor(Menstruation))]
+  )
+
+p <- ggplot(summary_all_cohorts %>% filter(Group == 'Pre_menopause_women'),
+            aes(x=Ferritin)) + 
+  geom_histogram(position = "dodge") +
+  scale_x_log10() + 
+  geom_text(aes(x=x,y=y,label=Freq),data=temp) + 
+  facet_grid(Menstruation~Cohort,scales = "free_y") + 
+  geom_vline(aes(xintercept=15)) +
+  ylab("Count of persons")
+p
+ggsave(filename = "../results/figures/hist_ferritin_by_menstruation.png",
+        plot = p, 
+      width = 10,
+      height = 15,
+      dpi = 300,
+      units = "cm")
+
+
+```
+
+## Ferritin and CRP
+
+```{r}
+
+p <- ggplot(aes(y=Ferritin, x=CRP),data=summary_all_cohorts)
+p <- p+ geom_point()
+p <- p +  geom_hline(aes(yintercept=15))
+p <- p + facet_grid(Group~Cohort)
+p <- p + scale_x_log10() + scale_y_log10()
+p <- p + geom_smooth(method='gam')
+p
+
+```
 

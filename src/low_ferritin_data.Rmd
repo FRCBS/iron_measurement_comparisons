@@ -939,10 +939,10 @@ Due to difference in the CRP measurements (hs-CRP for the general population coh
 
 ```{r}
 # FinRisk97
-fr1997_summary_final$CRP[fr1997_summary_final$CRP < "3.0"] <- 2.9
+fr1997_summary_final$CRP[fr1997_summary_final$CRP < 3.0] <- 2.9
 
 # Health2000
-h2000_summary_final$CRP[h2000_summary_final$CRP < "3.0"] <- 2.9
+h2000_summary_final$CRP[h2000_summary_final$CRP < 3.0] <- 2.9
 ```
 
 Previous childbirth is recoded 
@@ -1002,6 +1002,9 @@ h2000_summary_final <- h2000_summary_final %>%
 # merge the cohorts
 
 summary_all_cohorts <- bind_rows(blood_data_summary_final, fr1997_summary_final, h2000_summary_final)
+
+file <- "../results/summary_all_cohorts.rdata"
+save(summary_all_cohorts,file=file)
 
 ```
 
