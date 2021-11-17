@@ -867,6 +867,8 @@ p
 
 ```{r}
 
+save(plotdata_filtered,file="../results/bootstraps/plotdata_filtered.rdata")
+
 p <- p +   labs(title = NULL,subtitle = NULL)
 ggplot2::ggsave(filename = "../results/figures/forest_all_cohorts_boot.pdf",
                 plot= p,

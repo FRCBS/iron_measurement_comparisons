@@ -250,6 +250,24 @@ p
 
 ### All groups together
 
+```{r}
+regressor_values <- c(
+ "Age" = "Age",
+   "log_CRP" = "log(CRP)",
+   "BMI" = "BMI",
+   "log_last_donation" = "log(days to last donation)",
+   "CohortFINRISK97" ="FINRISK97",
+   "CohortHEALTH00" ="HEALTH00",
+   "Smokingyes" ="Smoker",
+    "iron_complience" = "Iron compliance",
+    "donation_count_2" = "Donations in last 2 years",
+    "Menstruationregular_period" = "Regular periods"
+)
+```
+
+
+
+
 ```{r }
 
 intervals_men <- mcmc_intervals_data(
@@ -266,7 +284,7 @@ intervals_pre <- mcmc_intervals_data(
   prob_outer = 0.95,
   point_est = "median",
   transformations = "exp"
-  ) %>% mutate(Group='Pre') %>% 
+  ) %>% mutate(Group='Pre-menopausal women') %>% 
   arrange(m) # how to order the variables?
 
 intervals_post <- mcmc_intervals_data(
@@ -275,24 +293,26 @@ intervals_post <- mcmc_intervals_data(
   prob_outer = 0.95,
   point_est = "median",
   transformations = "exp"
-  ) %>% mutate(Group='Post')
+  ) %>% mutate(Group='Post-menopausal women')
 
 intervals_combined <- rbind(intervals_pre,intervals_post,intervals_men) %>% 
   filter(! (parameter == 'exp(b_Intercept)' | parameter == 'exp(lp__)')) %>% 
-  mutate(parameter = gsub("\\)","",gsub("exp\\(b_","",parameter))) #%>% 
+  mutate(parameter = gsub("\\)","",gsub("exp\\(b_","",parameter))) %>% 
+  mutate(regressor = plyr::revalue(parameter, regressor_values)) %>% 
+  select(-parameter)
   #arrange(m)
 
 
 ```
 
 
-```{r , warning=FALSE}
+```{r , fig1, fig.height = 10, fig.width = 15 ,warning=FALSE}
 
 orlower <- 1/10
 orupper <- 10
 
 # Truncate ORs for plotting
-temp <- intervals_combined %>% 
+plotdata <- intervals_combined %>% 
   mutate(
     ll = case_when(
       ll < orlower ~ orlower,
@@ -305,9 +325,9 @@ temp <- intervals_combined %>%
   )
 
 #theme_set(bayesplot::theme_default())
-pos <- position_nudge(y=as.numeric(as.factor(temp$Group))/5 -0.1) 
+pos <- position_nudge(y=as.numeric(as.factor(plotdata$Group))/5 -0.1) 
 
-p <- ggplot(temp, aes(x = m, y = parameter, color = Group)) + 
+p <- ggplot(plotdata, aes(x = m, y = regressor, color = Group)) + 
   geom_point(position = pos,
              size=4) +
   geom_linerange(aes(xmin = ll, xmax = hh), 
@@ -332,7 +352,8 @@ p <- ggplot(temp, aes(x = m, y = parameter, color = Group)) +
         axis.text.y = element_text(size = 14)
   ) +
   guides(shape = "none") +
-  theme_classic()
+  theme_classic() +
+  ylab("Coefficient") 
 
 p
 
@@ -345,10 +366,91 @@ p
 ggplot2::ggsave(filename = "../results/figures/forest_all_cohorts_bayes.pdf",
                 plot = p,
                 width = 35,
-                height = 18,
+                height = 25,
                 dpi = 600,
                 units = "cm")
 
 
 ```
 
+
+
+## Compare to bootstrapped
+
+```{r  fig2, fig.height = 15, fig.width = 10 ,warning=FALSE}
+file <- "../results/bootstraps/plotdata_filtered.rdata"
+if(file.exists(file)) {
+  load(file)
+  temp <- plotdata_filtered %>% select(-p.value,-is_sig) %>% 
+    rename(ll = Bca_inf,
+           hh = Bca_sup,
+           m = OR
+    ) %>%  mutate(
+      Method = "Bayes"
+    ) %>%  rename(Group=group)
+  
+  temp <- plotdata %>%  select(regressor,ll,hh,m,Group) %>% 
+    mutate(Method="Boot") %>% 
+  bind_rows(temp)
+  
+  temp <- temp %>% 
+    mutate(
+      ll = case_when(
+        ll < orlower ~ orlower,
+        TRUE ~ ll
+      ),
+      hh = case_when(
+        hh > orupper ~ orupper,
+        TRUE ~ hh
+      )
+    )
+  
+  pos <- position_nudge(y=as.numeric(as.factor(temp$Method))/5 -0.1) 
+  
+  p <- ggplot(temp, aes(x = m, y = regressor, color = Method)) + 
+     geom_point(position = pos,
+                size=4) +
+    geom_linerange(aes(xmin = ll, xmax = hh), 
+                   position = pos,
+                   size = 1 
+    ) +
+    # scale_color_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
+    #                    limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
+    # scale_fill_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
+    #                   limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
+    #scale_shape_manual(values = c(1,16)) +
+    scale_x_log10(limits=c(orlower,orupper))  + #how to get the lines that drop out of the visible?  
+    geom_vline(xintercept = 1 , color = "grey", linetype = "dotted",
+               size = 1) +
+    theme(axis.title = element_text(size = 14),
+          strip.text =  element_text(size = 14),
+          legend.text = element_text(size = 12),
+          strip.background = element_rect(fill = "white"),
+          strip.background.x = element_blank(),
+          axis.text.x = element_text(size = 14),
+          axis.text.y = element_text(size = 14)
+    ) +
+    guides(shape = "none") +
+    theme_classic() +
+    facet_grid(Group~.) +
+    ylab("Coefficient") 
+  
+  p
+  
+  
+}
+```
+
+
+```{r}
+if(file.exists(file)) {
+
+ggplot2::ggsave(filename = "../results/figures/forest_all_cohorts_bayes_vs_boot.pdf",
+                plot = p,
+                width = 35,
+                height = 30,
+                dpi = 600,
+                units = "cm")
+}
+
+```
