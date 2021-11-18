@@ -2,8 +2,7 @@
 title: "Low ferritin model"
 author: "Sofie Ekroos"
 date: "19.7.2021"
-output: github_document
-bibliography: index.bib
+output: pdf_document
 ---
 
 Based on the original code written by Muriel Lobier and Mikko Arvas (https://github.com/FRCBS/iron_levels_of_blood_donors/blob/master/src/index.Rmd and https://github.com/FRCBS/changes_in_donor_health/blob/master/src/explorative_analysis.Rmd)
@@ -14,30 +13,13 @@ This document includes all codes necessary to run the analysis of and produce th
 
 ```{r setup, , message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-
+# echo "rmarkdown::render('low_ferritin_model.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/low_ferritin_model.pdf')" | R --slave
 library(tidyverse)
-library(tableone)
-library(stargazer)
-library(gridExtra)
-library(cowplot)
-library(broom)
-library(GGally)
-library(ggfortify)
-library(knitr)
-library(lubridate)
-library(car)
-library(sfsmisc)
-library(MASS)
-library(ordinal)
-library(sjmisc)
-library(epiDisplay)
 library(safeBinaryRegression)
-library(epitools)
-library(ez)
-library(ggbeeswarm)
 library(tidymodels)
 library(ggplot2)
-library(cowplot)
+library(car)
+library(boot)
 ```
 
 PART 1: LOGISTIC REGRESSION
@@ -49,7 +31,13 @@ Load data
 ```{r}
 load("../data/ID_data_regression_cohorts.rdata")
 all_cohorts <- regression_cohorts
+
+all_cohorts %>% summarise_all(funs(sum(is.na(.)))) %>% 
+  pivot_longer(everything()) %>% filter(value > 0)
+
 ```
+
+
 
 ## Percentage of ID, all cohorts
 
@@ -65,9 +53,13 @@ all_cohorts %>%
   summarise(
     ID = iron_deficiency,
     n=n,
-    Percentage = round(n/sum(n),2)
+    Percentage = round(n/sum(n),2),
+    .groups='keep'
   )
 
+```
+
+```{r}
 # Percentage of ID, FinDonor  
 all_cohorts %>%
   filter(Cohort == "FINDONOR") %>% 
@@ -78,9 +70,12 @@ all_cohorts %>%
   summarise(
     ID = iron_deficiency,
     n=n,
-    Percentage = round(n/sum(n),2)
+    Percentage = round(n/sum(n),2),
+    .groups='keep'
   )
+```
 
+```{r}
 # percentage of ID, FinRisk97
 all_cohorts %>%
   filter(Cohort == "FINRISK97") %>% 
@@ -91,20 +86,24 @@ all_cohorts %>%
   summarise(
     ID = iron_deficiency,
     n=n,
-    Percentage = round(n/sum(n),2)
+    Percentage = round(n/sum(n),2),
+    .groups='keep'
   )
+```
 
+```{r}
 # percentage of ID, Health2000
 all_cohorts %>%
   filter(Cohort == "HEALTH00") %>% 
   dplyr::select(Group, iron_deficiency) %>% 
   group_by(Group, iron_deficiency) %>% 
   count() %>% 
-  group_by(Group) %>% 
+  #group_by(Group) %>% 
   summarise(
     ID = iron_deficiency,
     n=n,
-    Percentage = round(n/sum(n),2)
+    Percentage = round(n/sum(n),2),
+    .groups='keep'
   )
 ```
 
@@ -132,18 +131,19 @@ We center all variables entered as continuous.
 #######################################################################################################################################
 ** POISTA TÄMÄ KOHTA ENNEN VERTAILUA NL-KOHORTTIVERTAILUA, HEILTÄ PUUTTUU CRP DATA. SÄILYTÄ JOS SAADAAN CRP DATAA UUDESTA KOHORTISTA ** 
 
-We are missing CRP data from `r all_cohorts %>% filter(is.na(CRP)) %>% nrow()`. These will need to be removed. 
+We are missing CRP data from `r all_cohorts %>% filter(is.na(CRP)) %>% filter(! CRP >= 30) %>% nrow()`. These will need to be removed. 
 
 ```{r}
 all_cohorts <- all_cohorts %>% 
-  filter(!is.na(CRP))
+  filter(!is.na(CRP)) %>% 
+  filter(! CRP >= 30)
 ```
 
 *** "POISTA TÄMÄ KOHTA" LOPPUU ***
 #######################################################################################################################################
 
 
-## All cohorts 
+## Data transformations
 
 ```{r}
 # men
@@ -184,7 +184,7 @@ regression_data_post <- all_cohorts %>%
 
 ```
 
-# Remove ordering from variables !!!!!!!!!!HUOM !!!!!!! :)
+%% Remove ordering from variables !!!!!!!!!!HUOM !!!!!!! :)
 
 ```{r}
 all_cohorts <- all_cohorts %>% mutate_if(is.ordered, function(x){factor(x, ordered = FALSE)})
@@ -213,6 +213,8 @@ Next let's try creating a model that uses all of the variables to predict ID.
 
 `iron_deficiency ~ .` means that we want to model ID using all of the remaining variables. --> This did not work (why?), added variables one by one.
 
+## Men
+
 ```{r}
 #men
 logistic_men <- glm(iron_deficiency ~ Age + 
@@ -223,9 +225,15 @@ logistic_men <- glm(iron_deficiency ~ Age +
                   log_last_donation + 
                   log_CRP +
                   Cohort, 
-                data = regression_data_men, family = "binomial", separation = "test")
+                data = regression_data_men, 
+                family = "binomial", 
+                separation = "test")
 summary(logistic_men)
+```
 
+## Pre
+
+```{r}
 # premenopausal women
 logistic_pre <- glm(iron_deficiency ~ Age + 
                   BMI + 
@@ -238,7 +246,11 @@ logistic_pre <- glm(iron_deficiency ~ Age +
                   Menstruation, 
                 data = regression_data_pre, family = "binomial", separation = "test")
 summary(logistic_pre)
+```
 
+## Post
+
+```{r}
 # postmenopausal women
 logistic_post <- glm(iron_deficiency ~ Age + 
                   BMI + 
@@ -252,7 +264,7 @@ logistic_post <- glm(iron_deficiency ~ Age +
 summary(logistic_post)
 ```
 
-## thoughts on the summary (CHANGE THIS PART TO REFLECT CURRENT MODEL, THIS IS OUT OF DATE):
+%% thoughts on the summary (CHANGE THIS PART TO REFLECT CURRENT MODEL, THIS IS OUT OF DATE):
 
 1) Deviance residuals look good 
 2) The coefficients look largly statistically significant, with some variance among the groups  
@@ -355,30 +367,37 @@ predicted_ID_post$rank <- 1:nrow(predicted_ID_post)
 
 Draw the data and save to pdf 
 
-```{r}
+```{r , message=FALSE}
 # men
 ggplot(data = predicted_ID_men, aes(x=rank, y=probability_of_ID_men)) + 
   geom_point(aes(color=ID), alpha=1, shape=4, stroke=2) + 
   xlab("Index") + 
   ylab("Predicted probability of iron deficiency, men") 
 
-ggsave("iron_deficiency_probabilities_men.pdf")
+ggsave("../results/figures/iron_deficiency_probabilities_men.pdf")
+```
 
+add below each plot some interpretation of what it might mean, is it good or bad?
+
+
+```{r , message=FALSE}
 # premenopausal women
 ggplot(data = predicted_ID_pre, aes(x=rank, y=probability_of_ID_pre)) + 
   geom_point(aes(color=ID), alpha=1, shape=4, stroke=2) + 
   xlab("Index") + 
   ylab("Predicted probability of iron deficiency, premenopausal women") 
 
-ggsave("iron_deficiency_probabilities_pre.pdf")
+ggsave("../results/figures/iron_deficiency_probabilities_pre.pdf")
+```
 
+```{r , message=FALSE}
 # postmenopausal women 
 ggplot(data = predicted_ID_post, aes(x=rank, y=probability_of_ID_post)) + 
   geom_point(aes(color=ID), alpha=1, shape=4, stroke=2) + 
   xlab("Index") + 
   ylab("Predicted probability of iron deficiency, postmenopausal women") 
 
-ggsave("iron_deficiency_probabilities_post.pdf")
+ggsave("../results/figures/iron_deficiency_probabilities_post.pdf")
 ```
 
 
@@ -390,14 +409,20 @@ ggsave("iron_deficiency_probabilities_post.pdf")
 
 ```{r}
 # men
-plot(logistic_men)
-
-# premenopausal women 
-plot(logistic_pre)
-
-# postmenopausal women
-plot(logistic_post)
+#plot(logistic_men,which = 5)
 ```
+
+
+```{r}
+# premenopausal women 
+#plot(logistic_pre,which = 5)
+```
+```{r}
+# postmenopausal women
+#plot(logistic_post,which = 5)
+```
+
+Most likely these just should not be used https://stats.stackexchange.com/questions/121490/interpretation-of-plot-glm-model .
 
 ### Variance inflaction factor 
 
@@ -406,10 +431,15 @@ The more VIF increases, the less reliable regression results are going to be. A 
 ```{r}
 # men 
 vif(logistic_men)
+```
+As the last_donation is simulated for general population cohorts this problem is not suprising. But does it matter?
 
+
+```{r}
 # premenopausal women
 vif(logistic_pre)
-
+```
+```{r}
 # postmenopausal women
 vif(logistic_post)
 ```
@@ -418,7 +448,10 @@ Cohort-variables have very high VIFs...
 
 ```{r}
 # merge the groups back into one table
-regression_data <- bind_rows(regression_data_men, regression_data_post, regression_data_pre)
+regression_data <- bind_rows(regression_data_men, 
+                             regression_data_post, 
+                             regression_data_pre) 
+  
 ```
   
 # Bootstraps
@@ -444,6 +477,7 @@ In this section we build the mechanisms for the bootstrapping itself
 
 get_coefficients <- function(data, boot_ind){
   fit <- glm(iron_deficiency~.,
+             #iron_deficiency~., i.e. model iron_deficiency as outcome against everything else in the table. 
               data[boot_ind,],
               family = "binomial")
 #  print(names(coef(fit)))
@@ -472,7 +506,7 @@ get_bootstrap <- function(data, nb_boot){
     fit_boot <- boot(data, statistic= get_coefficients, R = nb_boot)
 
  cat(nrow(data),"get_bootstrap 2\n")
-  fit_boot_distrib <- as.tibble(fit_boot$t)  
+  fit_boot_distrib <- as_tibble(fit_boot$t)  
   names(fit_boot_distrib) <- names(fit_boot$t0)
 
   fit_boot_Bca <- compute_Bca_CI(fit_boot)
@@ -508,156 +542,88 @@ Näistä log_CRP ja iron_complience  puuttuvat NL-kohorteista, kiinnosti vaan n�
 
 
 ```{r}
-# Error in t.star[r, ] <- res[[r]] : 
-#   number of items to replace is not a multiple of replacement length
-#can sometimes be fixed by just adding bootstrap, but sometimes requires dropping out a variable
-
-
 get_bootstrap_coeffs <- function(regression_data, current_group, #men, pre or post
                                  nb_boot ) #start at  100, then build up to around 1000
 {
-
-  ## preprocess and standardize data - muuta muuttujat omiin, ei ehkä tarvii tehdä
   
-    # test_data_std <- regression_data %>% 
-    #   filter(group == current_group) %>% 
-    #   dplyr::select(donor, age, starting_weight, BMI_diff,
-    #                 log_Ferritin_beginning, Hb_beginning, 
-    #                 donation_frequency) %>% 
-    #   gather(key = key, value = value, -donor) %>% 
-    #   group_by(key) %>% 
-    #   mutate(value_scale = scale(value, scale = FALSE)[,1]) %>% 
-    #   dplyr::select(-value) %>% 
-    #   spread(key = key, value = value_scale) 
-     
-    if (current_group == "Men") {
-      test_data_std <- regression_data %>% 
-                                    dplyr::select(donor, health_outcome, health_very_good, health_excellent,
-                                                #  sleep_night_d, ##Error in t.star[r, ] <- res[[r]] :
-                                                  cholesterol_d,
-                                                  blood_sugar_d,
-                                                  HBP_d,
-                                                  low_hb_hist_d,
-                                                  iron_supp_d,
-                                                  freq_calm_d,
-                                                  freq_red_meat_d,
-                                                  freq_fruits_d,
-                                                  freq_juices_d,
-                                                  freq_wholem_d,
-                                                  freq_milk_d,
-                                                  freq_cof_d,
-                                                  freq_tea_d,
-                                                  phys_cond_d,
-                                                  act_heavy_d,
-                                                  sleep_enough_d,
-                                                  day_act_d,
-                                                  h_act_light_d,
-                                                  vita_multi_d,
-                                                  #vita_iron_d, #Error in t.star[r, ] <- res[[r]]
-                                                  sleep_tired_d,
-                                                  anti_inf_d,
-                                                  phys_inf_d,
-                                                  #  ment_inf_d,
-                                                  freq_alc_d,
-                                                  life_qual,
-                                                  employment
-                                                #  education # Error in t.star[r, ] <- res[[r]] : 
-                                                # smoking_behavior #Error in t.star[r, ] <- res[[r]] :
-                                                  
-                                    ),
-                                  by = "donor") %>% 
-        dplyr::select(-donor) 
-    }
-    
-    if (current_group == "Pre_menopause_women") {
-      test_data_std <- inner_join(test_data_std,regression_data %>% 
-                                    dplyr::select(donor, health_outcome, health_very_good, health_excellent,
-                                                #  sleep_night_d, #Error in t.star[r, ] <- res[[r]] :
-                                                  cholesterol_d,
-                                                  blood_sugar_d,
-                                                  HBP_d,
-                                                  low_hb_hist_d,
-                                                  iron_supp_d,
-                                                  freq_calm_d,
-                                                  freq_red_meat_d,
-                                                  freq_fruits_d,
-                                                  freq_juices_d,
-                                                  freq_wholem_d,
-                                                  freq_milk_d,
-                                                  freq_cof_d,
-                                                  freq_tea_d,
-                                                  phys_cond_d,
-                                                  act_heavy_d,
-                                                  sleep_enough_d,
-                                                  day_act_d,
-                                                  h_act_light_d,
-                                                  vita_multi_d,
-                                                  #vita_iron_d, #Error in t.star[r, ] <- res[[r]]
-                                                  sleep_tired_d,
-                                                  anti_inf_d,
-                                                  phys_inf_d,
-                                                  # ment_inf_d,
-                                                  freq_alc_d,
-                                                  life_qual,
-                                                  employment
-                                                #  education #Error in t.star[r, ] <- res[[r]] : 
-                                               #   smoking_behavior # Error in t.star[r, ] <- res[[r]] : 
-                                                  
-                                    ),
-                                  by = "donor") %>% 
-        dplyr::select(-donor) 
-    }
-    
-      if (current_group == "Post_menopause_women") {
-      test_data_std <- inner_join(test_data_std,regression_data %>% 
-                                    dplyr::select(donor, health_outcome, health_very_good, health_excellent,
-                                                #  sleep_night_d, #Error in t.star[r, ] <- res[[r]] :
-                                                 cholesterol_d,
-                                                 blood_sugar_d,
-                                                  HBP_d,
-                                                  low_hb_hist_d,
-                                                  iron_supp_d,
-                                                  freq_calm_d,
-                                                  freq_red_meat_d,
-                                                  freq_fruits_d,
-                                                  freq_juices_d,
-                                                  freq_wholem_d,
-                                                  freq_milk_d,
-                                                  freq_cof_d,
-                                                  freq_tea_d,
-                                                  phys_cond_d,
-                                                  act_heavy_d,
-                                                  sleep_enough_d,
-                                                  day_act_d,
-                                                  h_act_light_d,
-                                                  vita_multi_d,
-                                                  #vita_iron_d #Error in t.star[r, ] <- res[[r]]
-                                                  sleep_tired_d,
-                                                  anti_inf_d,
-                                                  phys_inf_d,
-                                                  # ment_inf_d # Error in t.star[r, ] <- res[[r]]
-                                                  freq_alc_d,
-                                                  life_qual, # Error in bca.ci(boot.out, conf, index[1L], L = L, t = t.o, t0 = t0.o,  : estimated adjustment 'w' is infinite -> works if 10k boots.
-                                                  employment
-                                                #  education # Error in bca.ci(boot.out, conf, index[1L], L = L, t = t.o, t0 = t0.o,  :
-                                                #  smoking_behavior # Error in t.star[r, ] <- res[[r]]
-                                                  
-                                    ),
-                                  by = "donor") %>% 
-        dplyr::select(-donor) 
-    }
+  
+  if (current_group == "Men") {
+    test_data_std <- regression_data %>% 
+      filter(Group == "Men") %>% 
+      select(
+      #By commenting out variables from this list you change what is included in the bootsrapped models
+      #ID,
+      #log_ferritin,
+      Age,
+      log_CRP,
+      BMI,
+      #donation_count,
+      log_last_donation,
+      Cohort,           
+      iron_deficiency,
+      Smoking,
+      iron_complience,
+      #Group,
+      donation_count_2#,
+      #Menstruation
+    )
+  }
+  
+  if (current_group == "Pre_menopause_women") {
+    test_data_std <- regression_data %>% 
+      filter(Group == "Pre_menopause_women") %>% 
+      select(
+      #By commenting out variables from this list you change what is included in the bootsrapped models
+      #ID,
+      #log_ferritin,
+      Age,
+      log_CRP,
+      BMI,
+      #donation_count,
+      log_last_donation,
+      Cohort,           
+      iron_deficiency,
+      Smoking,
+      iron_complience,
+      #Group,
+      donation_count_2,
+      Menstruation
+    )  
+  }
+  
+  if (current_group == "Post_menopause_women") {
+    test_data_std <- regression_data %>%
+      filter(Group == "Post_menopause_women") %>%
+      select(
+      #By commenting out variables from this list you change what is included in the bootsrapped models
+      #ID,
+      #log_ferritin,
+      Age,
+      log_CRP,
+      BMI,
+      #donation_count,
+      log_last_donation,
+      Cohort,           
+      iron_deficiency,
+      Smoking,
+      iron_complience,
+      #Group,
+      donation_count_2#,
+      #Menstruation
+    )
+  }
   cat(nrow(test_data_std),current_group,"get_bootstrap_coeffs 1\n")
   
   # tässä itse bootstrapping
   result <- test_data_std %>% 
-  get_bootstrap(nb_boot = nb_boot)
-
+    get_bootstrap(nb_boot = nb_boot)
+  
   cat(nrow(test_data_std),current_group,"get_bootstrap_coeffs 2\n")
   bootstrap_distrib <- result[[1]] %>% 
     gather(key = regressor, value = coefficient) %>% 
     filter(regressor != "(Intercept)") %>% 
     mutate(group = current_group)
-      cat(nrow(test_data_std),current_group,"get_bootstrap_coeffs 3\n")
+  cat(nrow(test_data_std),current_group,"get_bootstrap_coeffs 3\n")
   Bca_CI  <- result[[2]] %>% mutate(group = current_group)
   Bca_CI_2  <- result[[3]] %>% mutate(group = current_group)
   cat(nrow(test_data_std),current_group,"get_bootstrap_coeffs 4\n")
@@ -721,6 +687,14 @@ for(group_str in c("Pre_menopause_women","Men","Post_menopause_women")){
 }
 
 
+#Typical errors:
+# Error in bca.ci(boot.out, conf, index[1L], L = L, t = t.o, t0 = t0.o, : estimated adjustment 'a' is NA
+#   https://stats.stackexchange.com/questions/37918/why-is-the-error-estimated-adjustment-a-is-na-generated-from-r-boot-package
+#   try to increase nb_boot
+# Error in t.star[r, ] <- res[[r]] : 
+#   number of items to replace is not a multiple of replacement length
+#   can sometimes be fixed by just adding bootstrap, but sometimes requires dropping out a variable
+
 ```
 
 
@@ -729,75 +703,47 @@ bootstrap_Bca_CI %>%  group_by(group) %>% count()
 
 ```
 
-# Forest plots
+# Result plots
 
 ```{r}
-# "\U0394 BMI"
-
 regressor_values <- c(
- "age" = "Age",
-   "BMI_diff" = "BMI difference",
-   "donation_frequency" = "Donation frequency",
-   "Hb_beginning" = "Initial Hemoglobin",
-   "log_Ferritin_beginning" ="Initial Ferritin",
-   "starting_weight" ="Initial weight",
-   "health_very_good" ="Initial health rating \n Very good vs Satisfactory/Good",
-    "health_excellent" = "Initial health rating \n Excellent vs Satisfactory/Good",
- 
- 
- "cholesterol_dTRUE" = "Elevated cholesterol detected",
-"blood_sugar_dTRUE" = "Elevated blood sugar detected", 
-"HBP_dTRUE" = "High blood pressure detected",
-"low_hb_hist_dTRUE" = "Low haemoglobin detected",
-"iron_supp_dStable" = "FRCBS iron supplementation stable", 
-"iron_supp_dIncreased" = "FRCBS iron supplementation increased",
-"vita_multi_dStable" = "Frequency multivitamine stable",
-"vita_multi_dIncreased" = "Frequency multivitamine increased",
-#"vita_iron_dStable" = "Frequency iron supplements stable",
-#"vita_iron_dIncreased" = "Frequency iron supplements increased",
-"anti_inf_dStable" = "Frequency of anti-inflammatory stable",
-"anti_inf_dIncreased" = "Frequency of anti-inflammatory increased",
-"freq_red_meat_dStable" = "Frequency of red meat stable",
-"freq_red_meat_dIncreased" = "Frequency of red meat increased",
-"freq_fruits_dStable" = "Frequency of fruits stable",
-"freq_fruits_dIncreased" = "Frequency of fruits increased",
-"freq_juices_dStable" = "Frequency of juices stable",
-"freq_juices_dIncreased" = "Frequency of juices increased",
-"freq_wholem_dStable" = "Frequency of whole milk stable",
-"freq_wholem_dIncreased" = "Frequency of whole milk increased",
-"freq_milk_dStable" = "Frequency of milk stable",
-"freq_milk_dIncreased" = "Frequency of milk increased",
-"freq_cof_dStable" = "Frequency of coffee stable",
-"freq_cof_dIncreased"  = "Frequency of coffee increased",
-"freq_tea_dStable" = "Frequency of tea stable",
-"freq_tea_dIncreased" = "Frequency of tea increased",
-"freq_alc_dStable" = "Frequency of alcohol stable",
-"freq_alc_dIncreased" = "Frequency of alcohol increased",
-"phys_inf_dStable" = "Physical symptoms inferred stable",
-"phys_inf_dIncreased" = "Physical symptoms inferred increased",
-"phys_cond_dStable" = "Physical condition stable",
-"phys_cond_dIncreased" = "Physical condition increased",
-"act_heavy_dStable" = "Ability for heavy activity stable",
-"act_heavy_dIncreased" = "Ability for heavy activity increased",
-"day_act_dStable"  = "Typical day activity stable",
-"day_act_dIncreased" = "Typical day activity increased",
-"h_act_light_dStable"  = "Hours for light activity stable",
-"h_act_light_dIncreased"  = "Hours for light activity increased",
-"sleep_enough_dStable" = "Enough sleep stable",
-"sleep_enough_dIncreased"  = "Enough sleep increased",
-"sleep_tired_dStable" = "Tired during day stable",
-"sleep_tired_dIncreased" = "Tired during day increased",
-"freq_calm_dStable" = "Frequency of feeling calm stable",
-"freq_calm_dIncreased" =  "Frequency of feeling calm increase",
-"life_qualgood" = "Quality of life good",
-"life_qualvery_good" = "Quality of life very good",
-"employmentTRUE" = "Full time employed"
+ "Age" = "Age",
+   "log_CRP" = "log(CRP)",
+   "BMI" = "BMI",
+   "log_last_donation" = "log(days to last donation)",
+   "CohortFINRISK97" ="FINRISK97",
+   "CohortHEALTH00" ="HEALTH00",
+   "Smokingyes" ="Smoker",
+    "iron_complience" = "Iron compliance",
+    "donation_count_2" = "Donations in last 2 years",
+    "Menstruationregular_period" = "Regular periods"
 )
 ```
 
 
 
 ```{r}
+
+tidy_logit_pre_menop_women <-
+  logistic_pre %>% 
+  tidy %>% 
+  mutate(OR = exp(estimate),
+         group = "Pre_menopause_women")
+
+
+tidy_logit_post_menop_women <-
+  logistic_post %>% 
+  tidy %>% 
+  mutate(OR = exp(estimate),
+         group = "Post_menopause_women")
+
+tidy_logit_men <-
+  logistic_men %>% 
+  tidy %>% 
+  mutate(OR = exp(estimate),
+         group = "Men")
+
+
 temp <-
   tidy_logit_men %>% 
   bind_rows(tidy_logit_post_menop_women) %>% 
@@ -851,16 +797,6 @@ temp2 <-
 
 ```{r}
 bootstrap_Bca_CI <- temp
-plotdata <- bootstrap_distrib %>% 
-  mutate(regressor = plyr::revalue(regressor, regressor_values),
-  regressor = ordered(regressor,
-                  levels = as.character(regressor_values)),
-  regressor = fct_rev(regressor),
-  group = case_when(group == "Pre_menopause_women" ~ "Pre-menopausal women",
-    group == "Post_menopause_women" ~ "Post-menopausal women",
-    TRUE ~ "Men"),
-  group = ordered(group, levels = c( "Men",  "Post-menopausal women", "Pre-menopausal women" ) )) %>% 
-  mutate(OR = exp(coefficient))
 
 bootstrap_Bca_CI_2 <- temp2
 
@@ -870,79 +806,64 @@ write.csv(temp ,file = file,row.names = FALSE)
 
 ```
 
-#Small plot of filtered variables for main paper
-```{r fig1, fig.height = 10, fig.width = 15}
+## Forest
+```{r fig1, fig.height = 10, fig.width = 15 ,warning=FALSE}
 #set the forest plot OR scale lims
-orlimR <- 1000
+orlimR <- 10
 orlimL <- 1/orlimR
-pointrange2size <- 1.4
-#Filter for those that are sig in some:
-bootstrap_Bca_CI_filtered <- bootstrap_Bca_CI %>% group_by(regressor) %>% mutate(some_sig= any(is_sig)) %>% filter(some_sig == TRUE)
+#Filter for those that are sig in some: THIS DOES NOT NEED TO BE DONE
+bootstrap_Bca_CI_filtered <- bootstrap_Bca_CI %>% group_by(regressor) #%>% mutate(some_sig= any(is_sig)) %>% filter(some_sig == TRUE)
 #Set values on axes limits to facilitate plotting
 bootstrap_Bca_CI_filtered$Bca_sup[bootstrap_Bca_CI_filtered$Bca_sup > orlimR] <- orlimR
 bootstrap_Bca_CI_filtered$Bca_sup[bootstrap_Bca_CI_filtered$Bca_sup == 0] <- orlimR
 bootstrap_Bca_CI_filtered$Bca_inf[bootstrap_Bca_CI_filtered$Bca_inf < orlimL] <- orlimL
 
-#Filter for those that are sig in some:
-bootstrap_Bca_CI_filtered_2 <- bootstrap_Bca_CI_2 %>% group_by(regressor) %>% mutate(some_sig= any(is_sig)) %>% filter(some_sig == TRUE)
+#Filter for those that are sig in some: THIS DOES NOT NEED TO BE DONE
+bootstrap_Bca_CI_filtered_2 <- bootstrap_Bca_CI_2 %>% group_by(regressor) # %>% mutate(some_sig= any(is_sig)) %>% filter(some_sig == TRUE)
 #Set values on axes limits to facilitate plotting
 bootstrap_Bca_CI_filtered_2$Bca_sup[bootstrap_Bca_CI_filtered_2$Bca_sup > orlimR] <- orlimR
 bootstrap_Bca_CI_filtered_2$Bca_sup[bootstrap_Bca_CI_filtered_2$Bca_sup == 0] <- orlimR
 bootstrap_Bca_CI_filtered_2$Bca_inf[bootstrap_Bca_CI_filtered_2$Bca_inf < orlimL] <- orlimL
 
 
-plotdata_filtered <- plotdata %>% filter(plotdata$regressor %in% bootstrap_Bca_CI_filtered$regressor) 
+plotdata_filtered <- bootstrap_Bca_CI_filtered #%>% arrange(desc(O)) 
 
+pos <- position_nudge(y=as.numeric(as.factor(plotdata_filtered$group))/5 -0.1) 
 
-p  <- ggplot(aes(x = regressor, y = OR, color = group, fill = group),data = plotdata_filtered) +
-  geom_hline(yintercept = 1 , color = "grey", linetype = "dotted",
+p  <- ggplot(aes(y = regressor, x = OR, color = group, fill = group),data = plotdata_filtered) +
+  geom_vline(xintercept = 1 , color = "grey", linetype = "dotted",
              size = 1) +
-  # geom_violin(alpha = 0.15, trim = TRUE, position = position_dodge(width = 0.8), size = 0.1) +
-  geom_pointrange(data = bootstrap_Bca_CI_filtered,
-                  aes(ymin=Bca_inf, ymax = Bca_sup, shape = is_sig, color = group, fill = group),
-                  position = position_dodge(width = 0.7), size = 1, linetype = 1) +
-  # geom_pointrange(data = bootstrap_Bca_CI_filtered_2,
+  # geom_pointrange(data = bootstrap_Bca_CI_filtered,
   #                 aes(ymin=Bca_inf, ymax = Bca_sup, shape = is_sig, color = group, fill = group),
-  #                 position = position_dodge(width = 0.7), size = pointrange2size) +
-  # # geom_point(data = bootstrap_Bca_CI, 
-  #            aes(shape = is_sig, fill = group),
-  #            position = position_dodge(width = 0.8), size = 2) +
+  #                 position = position_dodge(width = 0.7), size = 1, linetype = 1) +
+  geom_linerange(data = bootstrap_Bca_CI_filtered,
+                  aes(xmin=Bca_inf, xmax = Bca_sup, color = group),
+                  position = pos
+                 , size = 1, linetype = 1) +
+   geom_point(data = bootstrap_Bca_CI,
+             aes(shape = is_sig, fill = group),
+             position = pos, 
+             size = 4
+             ) +
     scale_color_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
-                     limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
+                     limits = c("Men",  "Post-menopausal women","Pre-menopausal women" ),
+                     name="Group") +
      scale_fill_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
-                     limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
+                     limits = c("Men",  "Post-menopausal women","Pre-menopausal women" ),
+                     name="Group") +
  scale_shape_manual(values = c(1,16)) +
-  scale_y_log10(limits=c(orlimL,orlimR)) +
-  # scale_x_discrete(labels=parse(text=unique(bootstrap_Bca_CI$regressor)))
-  # ylim(1/35, 35) +
-  guides(shape = FALSE) +
+  scale_x_log10(limits=c(orlimL,orlimR)) +
+  guides(shape = "none") +
   theme_classic() +
-  # theme(legend.position = c(0.8,0.9),
-  #       legend.title = element_blank(),
-  #       legend.box = "vertical",
-  #       legend.text = element_text(size = 20),
-  #       plot.title =  element_text(size = 24,
-  #                                 hjust = 0),
-  #       panel.grid.minor.y = element_blank(),
-  #       axis.line = element_line(colour="black"),
-  #       axis.title.y = element_blank(),
-  #       axis.title.x = element_text(size = 24),
-  #       axis.text = element_text(size = 22),
-  #       panel.grid.major.y = element_blank()) +
-  coord_flip() +
-  xlab("Robust standardized coefficient") +
-  labs(title = "PREDICTORS OF WORSENED SELF-RATED HEALTH \nBETWEEN QUESTIONNAIRES",
-       subtitle = "") +
+  ylab("Coefficient") +
    theme(axis.title = element_text(size = 14),
         strip.text =  element_text(size = 14),
         legend.text = element_text(size = 12),
         strip.background = element_rect(fill = "white"),
         strip.background.x = element_blank(),
-        axis.text.y = element_text(size = 14),
-        axis.text.x = element_text(size = 14, angle = 30,hjust = 0.8),
-        plot.title =  element_text(size = 16),
-        plot.subtitle = element_text(size = 16,
-                                     hjust = 0.5))
+        axis.text.x = element_text(size = 14),
+        axis.text.y = element_text(size = 14)
+        )
 
 p
 
@@ -950,8 +871,10 @@ p
 
 ```{r}
 
+save(plotdata_filtered,file="../results/bootstraps/plotdata_filtered.rdata")
+
 p <- p +   labs(title = NULL,subtitle = NULL)
-ggplot2::ggsave(filename = "../results/figures/exp_small_log_reg_results_b.pdf",
+ggplot2::ggsave(filename = "../results/figures/forest_all_cohorts_boot.pdf",
                 plot= p,
 # do not change these rather just scale the ready pdf later if you need.
        width = 35,
@@ -962,172 +885,79 @@ ggplot2::ggsave(filename = "../results/figures/exp_small_log_reg_results_b.pdf",
 ```
 
 
-#Big plot of all variables for supplement
-```{r fig2, fig.height = 40, fig.width = 15}
-
-bootstrap_Bca_CI$Bca_sup[bootstrap_Bca_CI$Bca_sup > orlimR] <- orlimR
-bootstrap_Bca_CI$Bca_sup[bootstrap_Bca_CI$Bca_sup == 0] <- orlimR
-bootstrap_Bca_CI$Bca_inf[bootstrap_Bca_CI$Bca_inf < orlimL] <- orlimL
-
-#Set values on axes limits to facilitate plotting
-bootstrap_Bca_CI_2$Bca_sup[bootstrap_Bca_CI_2$Bca_sup > orlimR] <- orlimR
-bootstrap_Bca_CI_2$Bca_sup[bootstrap_Bca_CI_2$Bca_sup == 0] <- orlimR
-bootstrap_Bca_CI_2$Bca_inf[bootstrap_Bca_CI_2$Bca_inf < orlimL] <- orlimL
 
 
-p2  <- ggplot(aes(x = regressor, y = OR, color = group, fill = group),data = plotdata) +
-  geom_hline(yintercept = 1 , color = "grey", linetype = "dotted",
-             size = 1) +
-  # geom_violin(alpha = 0.15, trim = TRUE, position = position_dodge(width = 0.8), size = 0.1) +
-  geom_pointrange(data = bootstrap_Bca_CI,
-                  aes(ymin=Bca_inf, ymax = Bca_sup, shape = is_sig, color = group, fill = group),
-                  position = position_dodge(width = 0.7), size = 1, linetype = 2) +
-  geom_pointrange(data = bootstrap_Bca_CI_2,
-                  aes(ymin=Bca_inf, ymax = Bca_sup, shape = is_sig, color = group, fill = group),
-                  position = position_dodge(width = 0.7), size = pointrange2size) +
-  # # geom_point(data = bootstrap_Bca_CI, 
-  #            aes(shape = is_sig, fill = group),
-  #            position = position_dodge(width = 0.8), size = 2) +
-    scale_color_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
-                     limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
-     scale_fill_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
-                     limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
- scale_shape_manual(values = c(1,16)) +
-  scale_y_log10(limits=c(orlimL,orlimR)) +
-  # scale_x_discrete(labels=parse(text=unique(bootstrap_Bca_CI$regressor)))
-  # ylim(1/35, 35) +
-  guides(shape = FALSE) +
-  theme_classic() +
-  # theme(legend.position = c(0.8,0.9),
-  #       legend.title = element_blank(),
-  #       legend.box = "vertical",
-  #       legend.text = element_text(size = 20),
-  #       plot.title =  element_text(size = 24,
-  #                                 hjust = 0),
-  #       panel.grid.minor.y = element_blank(),
-  #       axis.line = element_line(colour="black"),
-  #       axis.title.y = element_blank(),
-  #       axis.title.x = element_text(size = 24),
-  #       axis.text = element_text(size = 22),
-  #       panel.grid.major.y = element_blank()) +
-  coord_flip() +
-  xlab("Robust standardized coefficient") +
-  labs(title = "PREDICTORS OF WORSENED SELF-RATED HEALTH \nBETWEEN QUESTIONNAIRES",
-       subtitle = "") +
-   theme(axis.title = element_text(size = 14),
-        strip.text =  element_text(size = 14),
-        legend.text = element_text(size = 12),
-        strip.background = element_rect(fill = "white"),
-        strip.background.x = element_blank(),
-        axis.text.y = element_text(size = 14),
-        axis.text.x = element_text(size = 14, angle = 30,hjust = 0.8),
-        plot.title =  element_text(size = 16),
-        plot.subtitle = element_text(size = 16,
-                                     hjust = 0.5))
-
-p2
-```
-
-
-
-```{r}
-p2 <- p2 +   labs(title = NULL,subtitle = NULL)
-ggplot2::ggsave(filename = "../results/figures/exp_big_log_reg_results_b.pdf",
-                plot= p2,
-       width = 35,
-       height = 55,
-       dpi = 600,
-       units = "cm")
-
-```
 
 
 #Separate plots for individual variables
 
-```{r}
-fig.width=15
-fig.height=13
-#Load questionnaire data
-load(file = "../data/final_data.rdata") 
-final_data <- data
 
+```{r}
+file <- "../results/summary_all_cohorts.rdata"
+load(file)
+
+summary_all_cohorts <- summary_all_cohorts %>% 
+  rename(donation_count = TwoYearsFromStartCount_FB,
+         last_donation = DaysToPreviousFB,
+         iron_complience = IronComplienceNumeric) %>% 
+    filter(!is.na(CRP)) %>%  # Ploting the same persons that we used in the model
+    filter(!CRP >= 30)
+
+summary(summary_all_cohorts)
 ```
 
-## Change in physical condition color
-```{r}
+## Ferritin and menstruation
 
-pdata <- final_data %>% 
-  dplyr::select(donor, group, health, questionnaire) %>% 
-  drop_na(group) %>% 
-  filter( group != "Women_pre_menop_no_mens") %>% 
-  spread(key = questionnaire, value = health) %>% 
-  filter(First != "NA" & Second != "NA") %>%  
-  mutate(Difference = case_when(First < Second ~ "Improved",
-                                First == Second ~ "Stable",
-                                TRUE ~ "Worsened")) %>% 
-  inner_join(regression_data, by = c("donor", "group")) %>% 
-  mutate(group = case_when(group == "Pre_menopause_women" ~ "Pre-menopausal \n women",
-                           group == "Post_menopause_women" ~ "Post-menopausal \n women",
-                           TRUE ~ "Men"),
-         group = ordered(group, levels = c(  "Men", "Post-menopausal \n women", "Pre-menopausal \n women") ))
- 
-p <- ggplot(aes(x= phys_cond_d , fill = group), data=pdata) +
-  # geom_hline(yintercept = 15, color = "red", linetype = 3)
-  geom_bar()+
-  #geom_boxplot(outlier.alpha = 0) +
-  #geom_beeswarm(alpha = 0.5, shape = 1) +
-  # scale_y_log10() +
-  facet_grid(group ~ Difference,scales="free_y") +
-  scale_fill_manual(values = c( "#ff85a2",  "#de2d26","#00BFFF" ),
-                    limits = c("Pre-menopausal \n women", "Post-menopausal \n women","Men" )) +
-  theme_bw() +
-  theme(legend.position = "none") +
-  ggtitle("Evolution of self-rated health") +
-  xlab("Change in physical condition") +
-  ylab("Count") +
-  geom_text(stat='count', aes(label=..count..),color="black", vjust=1)  
-#scale_y_log10() 
+```{r , message=FALSE}
 
+temp <- summary_all_cohorts %>% 
+  filter(Group == 'Pre_menopause_women') %>%
+  mutate( iron_deficiency = Ferritin < 15) %>% 
+  group_by(iron_deficiency,Menstruation,Cohort) %>% 
+  summarise(n=n()
+            ) %>% 
+  group_by(Cohort) %>% 
+  summarise(
+    iron_deficiency = iron_deficiency,
+    Menstruation = Menstruation,
+    Freq = paste(round(n / sum(n),2) *100, "%"),
+    N = n
+            ) %>% 
+  mutate(
+    x = c(150,5)[as.numeric(as.factor(iron_deficiency))],
+    y =  c(20,100)[as.numeric(as.factor(Menstruation))]
+  )
 
-
-ggplot2::ggsave(plot=p,filename = "../results/figures/exp_phys_cond_c.pdf",
-       width = fig.width,
-       height = fig.height,
-       dpi = 600,
-       units = "cm")
-
+p <- ggplot(summary_all_cohorts %>% filter(Group == 'Pre_menopause_women'),
+            aes(x=Ferritin)) + 
+  geom_histogram(position = "dodge") +
+  scale_x_log10() + 
+  geom_text(aes(x=x,y=y,label=Freq),data=temp) + 
+  facet_grid(Menstruation~Cohort,scales = "free_y") + 
+  geom_vline(aes(xintercept=15)) +
+  ylab("Count of persons")
 p
+ggsave(filename = "../results/figures/hist_ferritin_by_menstruation.png",
+        plot = p, 
+      width = 10,
+      height = 15,
+      dpi = 300,
+      units = "cm")
+
+
 ```
 
+## Ferritin and CRP
 
-
-
-## Quality of life
 ```{r}
 
-p <- ggplot(aes(x= life_qual), data=pdata) +
-  # geom_hline(yintercept = 15, color = "red", linetype = 3)
-  geom_bar(aes(fill=group))+
-  #geom_boxplot(outlier.alpha = 0) +
-  #geom_beeswarm(alpha = 0.5, shape = 1) +
-  # scale_y_log10() +
-  facet_grid(group ~ Difference,scales="free_y") +
-  theme_bw() +
-  theme(legend.position = "none") +
-  ggtitle("Evolution of self-rated health")+
-  xlab("Quality of life") +
-  ylab("Count") +
-  geom_text(stat='count', aes(label=..count..),color="black", vjust=1) +
-  scale_fill_manual(values = c( "#ff85a2",  "#de2d26","#00BFFF" ),
-                     limits = c("Pre-menopausal \n women", "Post-menopausal \n women","Men" ))
-
-ggplot2::ggsave(plot=p,filename = "../results/figures/exp_life_qual_c.pdf",
-       width = fig.width,
-       height = fig.height,
-       dpi = 600,
-       units = "cm")
-
+p <- ggplot(aes(y=Ferritin, x=CRP),data=summary_all_cohorts)
+p <- p+ geom_point()
+p <- p +  geom_hline(aes(yintercept=15))
+p <- p + facet_grid(Group~Cohort)
+p <- p + scale_x_log10() + scale_y_log10()
+p <- p + geom_smooth(method='gam')
 p
-```
 
+```
 

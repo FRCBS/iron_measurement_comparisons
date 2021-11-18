@@ -1,0 +1,461 @@
+---
+title: "Low ferritin model"
+author: "Mikko Arvas"
+date: "15.11.2021"
+output: pdf_document
+
+---
+
+
+# Summary
+
+
+```{r setup, , message = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# echo "rmarkdown::render('low_ferritin_model_bayes.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/low_ferritin_model_bayes.pdf')" | R --slave
+library(tidyverse)
+library(brms)
+library(bayesplot)
+```
+
+
+
+PART 2: BAYESIAN LOGISTIC REGRESSION
+
+# Data loading and preparation 
+
+Load data
+
+```{r}
+load("../data/ID_data_regression_cohorts.rdata")
+all_cohorts <- regression_cohorts
+
+all_cohorts <- all_cohorts %>% 
+  filter(!is.na(CRP)) %>% 
+  filter(! CRP >= 30)
+```
+
+
+
+# All cohorts together 
+
+## Data
+```{r}
+# men
+## menstruation variable removed 
+regression_data_men <- all_cohorts %>% 
+  filter(Group == "Men") %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, Cohort, iron_deficiency, Smoking, iron_complience, Group) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2) 
+
+# premenopausal women
+regression_data_pre <- all_cohorts %>% 
+  filter(Group == "Pre_menopause_women") %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, Menstruation, Cohort, iron_deficiency, Smoking, iron_complience, Group) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2) 
+
+# postmenopausal womem 
+## menstruation variable removed 
+regression_data_post <- all_cohorts %>% 
+  filter(Group == "Post_menopause_women") %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, Cohort, iron_deficiency, Smoking, iron_complience, Group) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2) 
+
+
+```
+
+## Models 
+
+
+
+```{r men}
+#men
+file <- "../results/bmodels/logit_men_b"
+
+logistic_men_b <- brm(iron_deficiency ~ 
+                        Age + 
+                        BMI + 
+                        Smoking + 
+                        iron_complience + 
+                        donation_count_2 + 
+                        log_last_donation + 
+                        log_CRP +
+                        Cohort, 
+                      data = regression_data_men, 
+                      family = bernoulli(),
+                      file=file, 
+                      cores = 4,
+                      iter= 10000
+)
+
+summary(logistic_men_b)
+
+```
+
+```{r  pre}
+# premenopausal women
+file <- "../results/bmodels/logit_pre_b"
+
+logistic_pre_b <- brm(iron_deficiency ~ Age + 
+                        BMI + 
+                        Smoking + 
+                        iron_complience + 
+                        donation_count_2 + 
+                        log_last_donation + 
+                        log_CRP +
+                        Cohort + 
+                        Menstruation, 
+                      data = regression_data_pre,
+                      family = bernoulli(),
+                      file=file, 
+                      cores = 4,
+                      iter= 10000
+)
+
+summary(logistic_pre_b)
+
+
+```
+
+```{r  post}
+# postmenopausal women
+file <- "../results/bmodels/logit_post_b"
+
+logistic_post_b <- brm(iron_deficiency ~ Age + 
+                       BMI + 
+                       Smoking + 
+                       iron_complience + 
+                       donation_count_2 + 
+                       log_last_donation + 
+                       log_CRP +
+                       Cohort, 
+                     data = regression_data_post, 
+                     family = bernoulli(),
+                     file=file, 
+                     cores = 4,
+                     iter= 10000
+)
+
+summary(logistic_post_b)
+```
+
+## Diagnostics
+
+### Trace
+
+```{r , message=FALSE}
+mcmc_plot(logistic_men_b, type = "trace")
+```
+
+```{r , message=FALSE}
+mcmc_plot(logistic_pre_b, type = "trace")
+```
+
+```{r , message=FALSE}
+mcmc_plot(logistic_post_b, type = "trace")
+```
+
+Chains do not seem to get stuck.
+
+### ACF bars
+
+```{r}
+mcmc_plot(logistic_men_b, type = "acf_bar")
+```
+
+
+```{r}
+mcmc_plot(logistic_pre_b, type = "acf_bar")
+```
+
+
+```{r}
+mcmc_plot(logistic_post_b, type = "acf_bar")
+```
+
+Autocorrelation drops nicely.
+
+### Rhat
+
+```{r}
+mcmc_plot(logistic_men_b, type = "rhat")
+```
+
+```{r}
+mcmc_plot(logistic_pre_b, type = "rhat")
+```
+
+```{r}
+mcmc_plot(logistic_post_b, type = "rhat")
+```
+https://mc-stan.org/rstan/reference/Rhat.html
+
+
+"The Rhat function produces R-hat convergence diagnostic, which compares the between- and within-chain estimates for model parameters and other univariate quantities of interest. If chains have not mixed well (ie, the between- and within-chain estimates don't agree), R-hat is larger than 1. We recommend running at least four chains by default and only using the sample if R-hat is less than 1.05."
+
+## Forest plots
+
+```{r , message=FALSE, warning=FALSE}
+p <- mcmc_plot(logistic_men_b, 
+         type = "areas",
+         prob = 0.95,
+         transformations = "exp") +
+  geom_vline(xintercept = 1, color = "grey")
+
+p <- p + scale_x_log10()
+#Ferritin needs to be removed
+# plot.OR<-  tidy_logit_pre_menop_women %>%filter(!term=="log_Ferritin_beginning") %>%  dplyr::select(OR) %>% mutate(y=rev(2:(nrow(tidy_logit_pre_menop_women)))) %>% bind_rows(tibble(OR=NA,y=1 ))
+# p <- p + geom_point(aes(y=y,x=OR),data=plot.OR, col="red")
+p
+```
+
+
+```{r , message=FALSE, warning=FALSE}
+p <- mcmc_plot(logistic_pre_b, 
+         type = "areas",
+         prob=0.95,
+         prob_est="median",
+         transformations = "exp"
+        ) +
+  geom_vline(xintercept = 1, color = "grey")
+
+p <- p + scale_x_log10()
+p
+```
+
+
+```{r , message=FALSE, warning=FALSE}
+p <- mcmc_plot(logistic_post_b, 
+         type = "areas",
+         prob = 0.95,
+         transformations = "exp") +
+  geom_vline(xintercept = 1, color = "grey")
+
+p <- p + scale_x_log10()
+#Ferritin needs to be removed
+# plot.OR<-  tidy_logit_pre_menop_women %>%filter(!term=="log_Ferritin_beginning") %>%  dplyr::select(OR) %>% mutate(y=rev(2:(nrow(tidy_logit_pre_menop_women)))) %>% bind_rows(tibble(OR=NA,y=1 ))
+# p <- p + geom_point(aes(y=y,x=OR),data=plot.OR, col="red")
+p
+```
+
+### All groups together
+
+```{r}
+regressor_values <- c(
+ "Age" = "Age",
+   "log_CRP" = "log(CRP)",
+   "BMI" = "BMI",
+   "log_last_donation" = "log(days to last donation)",
+   "CohortFINRISK97" ="FINRISK97",
+   "CohortHEALTH00" ="HEALTH00",
+   "Smokingyes" ="Smoker",
+    "iron_complience" = "Iron compliance",
+    "donation_count_2" = "Donations in last 2 years",
+    "Menstruationregular_period" = "Regular periods"
+)
+```
+
+
+
+
+```{r }
+
+intervals_men <- mcmc_intervals_data(
+  logistic_men_b,
+  prob=0.9,
+  prob_outer = 0.95,
+  point_est = "median",
+  transformations = "exp"
+  ) %>% mutate(Group='Men')
+
+intervals_pre <- mcmc_intervals_data(
+  logistic_pre_b,
+  prob=0.9,
+  prob_outer = 0.95,
+  point_est = "median",
+  transformations = "exp"
+  ) %>% mutate(Group='Pre-menopausal women') %>% 
+  arrange(m) # how to order the variables?
+
+intervals_post <- mcmc_intervals_data(
+  logistic_post_b,
+  prob=0.9,
+  prob_outer = 0.95,
+  point_est = "median",
+  transformations = "exp"
+  ) %>% mutate(Group='Post-menopausal women')
+
+intervals_combined <- rbind(intervals_pre,intervals_post,intervals_men) %>% 
+  filter(! (parameter == 'exp(b_Intercept)' | parameter == 'exp(lp__)')) %>% 
+  mutate(parameter = gsub("\\)","",gsub("exp\\(b_","",parameter))) %>% 
+  mutate(regressor = plyr::revalue(parameter, regressor_values)) %>% 
+  select(-parameter)
+  #arrange(m)
+
+
+```
+
+
+```{r , fig1, fig.height = 10, fig.width = 15 ,warning=FALSE}
+
+orlower <- 1/10
+orupper <- 10
+
+# Truncate ORs for plotting
+plotdata <- intervals_combined %>% 
+  mutate(
+    ll = case_when(
+      ll < orlower ~ orlower,
+      TRUE ~ ll
+    ),
+    hh = case_when(
+      hh > orupper ~ orupper,
+      TRUE ~ hh
+    )
+  )
+
+#theme_set(bayesplot::theme_default())
+pos <- position_nudge(y=as.numeric(as.factor(plotdata$Group))/5 -0.1) 
+
+p <- ggplot(plotdata, aes(x = m, y = regressor, color = Group)) + 
+  geom_point(position = pos,
+             size=4) +
+  geom_linerange(aes(xmin = ll, xmax = hh), 
+                 position = pos,
+                 size = 1, 
+                 linetype = 1
+                 ) +
+  scale_color_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
+                     limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
+  scale_fill_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
+                    limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
+  scale_shape_manual(values = c(1,16)) +
+  scale_x_log10(limits=c(orlower,orupper))  + #how to get the lines that drop out of the visible?  
+  geom_vline(xintercept = 1 , color = "grey", linetype = "dotted",
+             size = 1) +
+  theme(axis.title = element_text(size = 14),
+        strip.text =  element_text(size = 14),
+        legend.text = element_text(size = 12),
+        strip.background = element_rect(fill = "white"),
+        strip.background.x = element_blank(),
+        axis.text.x = element_text(size = 14),
+        axis.text.y = element_text(size = 14)
+  ) +
+  guides(shape = "none") +
+  theme_classic() +
+  ylab("Coefficient") 
+
+p
+
+
+```
+
+```{r}
+
+
+ggplot2::ggsave(filename = "../results/figures/forest_all_cohorts_bayes.pdf",
+                plot = p,
+                width = 35,
+                height = 25,
+                dpi = 600,
+                units = "cm")
+
+
+```
+
+
+
+## Compare to bootstrapped
+
+```{r  fig2, fig.height = 15, fig.width = 10 ,warning=FALSE}
+file <- "../results/bootstraps/plotdata_filtered.rdata"
+if(file.exists(file)) {
+  load(file)
+  temp <- plotdata_filtered %>% select(-p.value,-is_sig) %>% 
+    rename(ll = Bca_inf,
+           hh = Bca_sup,
+           m = OR
+    ) %>%  mutate(
+      Method = "Bayes"
+    ) %>%  rename(Group=group)
+  
+  temp <- plotdata %>%  select(regressor,ll,hh,m,Group) %>% 
+    mutate(Method="Boot") %>% 
+  bind_rows(temp)
+  
+  temp <- temp %>% 
+    mutate(
+      ll = case_when(
+        ll < orlower ~ orlower,
+        TRUE ~ ll
+      ),
+      hh = case_when(
+        hh > orupper ~ orupper,
+        TRUE ~ hh
+      )
+    )
+  
+  pos <- position_nudge(y=as.numeric(as.factor(temp$Method))/5 -0.1) 
+  
+  p <- ggplot(temp, aes(x = m, y = regressor, color = Method)) + 
+     geom_point(position = pos,
+                size=4) +
+    geom_linerange(aes(xmin = ll, xmax = hh), 
+                   position = pos,
+                   size = 1 
+    ) +
+    # scale_color_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
+    #                    limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
+    # scale_fill_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
+    #                   limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
+    #scale_shape_manual(values = c(1,16)) +
+    scale_x_log10(limits=c(orlower,orupper))  + #how to get the lines that drop out of the visible?  
+    geom_vline(xintercept = 1 , color = "grey", linetype = "dotted",
+               size = 1) +
+    theme(axis.title = element_text(size = 14),
+          strip.text =  element_text(size = 14),
+          legend.text = element_text(size = 12),
+          strip.background = element_rect(fill = "white"),
+          strip.background.x = element_blank(),
+          axis.text.x = element_text(size = 14),
+          axis.text.y = element_text(size = 14)
+    ) +
+    guides(shape = "none") +
+    theme_classic() +
+    facet_grid(Group~.) +
+    ylab("Coefficient") 
+  
+  p
+  
+  
+}
+```
+
+
+```{r}
+if(file.exists(file)) {
+
+ggplot2::ggsave(filename = "../results/figures/forest_all_cohorts_bayes_vs_boot.pdf",
+                plot = p,
+                width = 35,
+                height = 30,
+                dpi = 600,
+                units = "cm")
+}
+
+```
