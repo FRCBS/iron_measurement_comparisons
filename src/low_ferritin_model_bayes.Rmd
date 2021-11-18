@@ -1,7 +1,7 @@
 ---
 title: "Low ferritin model"
 author: "Mikko Arvas"
-date: "15.22.2021"
+date: "15.11.2021"
 output: pdf_document
 
 ---
@@ -29,7 +29,12 @@ Load data
 ```{r}
 load("../data/ID_data_regression_cohorts.rdata")
 all_cohorts <- regression_cohorts
+
+all_cohorts <- all_cohorts %>% 
+  filter(!is.na(CRP)) %>% 
+  filter(! CRP >= 30)
 ```
+
 
 
 # All cohorts together 

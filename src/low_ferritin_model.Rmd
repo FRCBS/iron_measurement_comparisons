@@ -2,8 +2,7 @@
 title: "Low ferritin model"
 author: "Sofie Ekroos"
 date: "19.7.2021"
-output: github_document
-bibliography: index.bib
+output: pdf_document
 ---
 
 Based on the original code written by Muriel Lobier and Mikko Arvas (https://github.com/FRCBS/iron_levels_of_blood_donors/blob/master/src/index.Rmd and https://github.com/FRCBS/changes_in_donor_health/blob/master/src/explorative_analysis.Rmd)
@@ -14,7 +13,7 @@ This document includes all codes necessary to run the analysis of and produce th
 
 ```{r setup, , message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-
+# echo "rmarkdown::render('low_ferritin_model.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/low_ferritin_model.pdf')" | R --slave
 library(tidyverse)
 library(safeBinaryRegression)
 library(tidymodels)
