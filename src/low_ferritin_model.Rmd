@@ -40,8 +40,6 @@ library(ggplot2)
 library(cowplot)
 ```
 
-
-
 PART 1: LOGISTIC REGRESSION
 
 # Data loading and preparation 
