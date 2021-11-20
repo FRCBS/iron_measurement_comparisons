@@ -961,3 +961,16 @@ p
 
 ```
 
+## Ferritin and CRP, include linear model
+
+```{r}
+p <- ggplot(aes(y=Ferritin, x=CRP),data=summary_all_cohorts)
+p <- p+ geom_point()
+p <- p +  geom_hline(aes(yintercept=15))
+p <- p + facet_grid(Group~Cohort)
+p <- p + scale_x_log10() + scale_y_log10()
+p <- p + geom_smooth(method='gam')
+p <- p + geom_smooth(method="lm", color="red")
+p
+```
+
