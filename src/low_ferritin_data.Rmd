@@ -206,6 +206,7 @@ names(fr1997_summary)[names(fr1997_summary) == "ALUE"] <- "Region"
 names(h2000_summary)[names(h2000_summary) == "SHP_2000"] <- "Region"
 
 ## Weight
+names(blood_data_summary)[names(blood_data_summary) == "weight"] <- "Weight"
 names(fr1997_summary)[names(fr1997_summary) == "PAINO"] <- "Weight"
 names(h2000_summary)[names(h2000_summary) == "BMII_PAINO.x"] <- "Weight"
 
@@ -828,10 +829,10 @@ As decided previously, we remove data according the following criteria:
 
 * BMI > 50
 * Ferritin > 400 
-* Weight < 50kg (blood donor selection criteria, only removed from general population cohorts) 
+* Weight < 50kg (blood donor selection criteria) 
 
 This amounts to "cohort_name %>% filter(BMI >= 50 | Ferritin >= 400 | Weight < 50) %>% nrow()" participants that are removed. 
-  * FinDonor: `r blood_data_summary_final %>% filter(BMI >= 50 | Ferritin >= 400) %>% nrow()`
+  * FinDonor: `r blood_data_summary_final %>% filter(BMI >= 50 | Ferritin >= 400 | Weight < 50) %>% nrow()) %>% nrow()`
   * FinRisk97: `r fr1997_summary_final %>% filter(BMI >= 50 | Ferritin >= 400 | Weight < 50) %>% nrow()`
   * Health00: `r h2000_summary_final %>% filter(BMI >= 50 | Ferritin >= 400 | Weight < 50) %>% nrow()`
 
@@ -839,7 +840,7 @@ This amounts to "cohort_name %>% filter(BMI >= 50 | Ferritin >= 400 | Weight < 5
 ```{r}
 # FinDonor
 blood_data_summary_final <- blood_data_summary_final %>% 
-   filter(BMI < 50 & Ferritin < 400)
+   filter(BMI < 50 & Ferritin < 400 & Weight >= 50)
 
 # FinRisk97
 fr1997_summary_final <- fr1997_summary_final %>% 
@@ -1044,7 +1045,7 @@ For the code to work all three cohorts need to be merged into one single table. 
 blood_data_summary_final <- blood_data_summary_final %>% 
   dplyr::select(ID, Group, Sex, Age, TwoYearsFromStartCount_FB, DaysToPreviousFB,
                 Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, IronComplienceNumeric, PreviousChildbirth,
-                CRP, Region, Cohort) %>% 
+                CRP, Region, Weight, Cohort) %>% 
     mutate(Smoking = ifelse(Smoking == "daily", "yes", "no"),
          Smoking = factor(Smoking, levels = c( "no",  "yes")))
 
@@ -1052,7 +1053,7 @@ blood_data_summary_final <- blood_data_summary_final %>%
 fr1997_summary_final <- fr1997_summary_final %>% 
   dplyr::select(ID, Group, Sex, Age, TwoYearsFromStartCount_FB, DaysToPreviousFB,
                 Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, IronComplienceNumeric, PreviousChildbirth,
-                CRP, Region, Cohort) %>% 
+                CRP, Region, Weight, Cohort) %>% 
        mutate(Smoking = ifelse(Smoking == "1", "yes", "no"),
        Smoking = factor(Smoking, levels = c( "no",  "yes")))
 
@@ -1060,7 +1061,7 @@ fr1997_summary_final <- fr1997_summary_final %>%
 h2000_summary_final <- h2000_summary_final %>% 
   dplyr::select(ID, Group, Sex, Age, TwoYearsFromStartCount_FB, DaysToPreviousFB,
                 Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, IronComplienceNumeric, PreviousChildbirth,
-                CRP, Region, Cohort) %>% 
+                CRP, Region, Weight, Cohort) %>% 
          mutate(Smoking = ifelse(Smoking == "1", "yes", "no"),
          Smoking = factor(Smoking, levels = c( "no",  "yes")))
          
