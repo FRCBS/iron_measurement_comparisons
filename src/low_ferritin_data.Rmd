@@ -1098,6 +1098,7 @@ regression_cohorts <- summary_all_cohorts %>%
             last_donation = DaysToPreviousFB,
             iron_complience = IronComplienceNumeric) %>% 
      mutate(Age = Age / 5, 
+            Weight = Weight / 10,
             donation_count_2 = donation_count^2,
             log_ferritin = log(Ferritin),
             log_last_donation = log(last_donation)/log(2),
@@ -1120,7 +1121,7 @@ Data transformations:
     * Ferritin
     * CRP 
   
-* Age is divided by 5 to simplify coefficient interpretation
+* Age is divided by 5 and weight is devided by 10 to simplify coefficient interpretation
 * Number of days before donation is transformed as $log\_last\_donation = log(last\_donation)/log(2)$ to help with the interpretation of coefficients. 
     * An increase in one of the transformed variable is equivalent to a doubling of the number of days since last donation.
 
@@ -1142,8 +1143,9 @@ test_data_pre_women <- regression_cohorts %>%
   filter(Group == "Pre_menopause_women")
 
 test_data_pre_women <- test_data_pre_women %>% 
-  dplyr::select(ID, Group, Sex, Age, donation_count, last_donation, Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, iron_complience, PreviousChildbirth, CRP, Cohort, donation_count_2, log_ferritin, log_last_donation, log_CRP, iron_deficiency, Region) %>%
+  dplyr::select(ID, Group, Sex, Age, donation_count, last_donation, Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, iron_complience, PreviousChildbirth, CRP, Cohort, donation_count_2, log_ferritin, log_last_donation, log_CRP, iron_deficiency, Region, Weight) %>%
   mutate(Age = scale(Age, scale = FALSE)[,1],
+         Weight = scale(Weight, scale = FALSE)[,1],
          log_CRP = scale(log_CRP, scale = FALSE)[,1],
          donation_count = scale(donation_count, scale = FALSE)[,1],
          log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
@@ -1167,8 +1169,9 @@ test_data_post_women <- regression_cohorts %>%
   filter(Group == "Post_menopause_women") 
 
 test_data_post_women <- test_data_post_women %>% 
-  dplyr::select(ID, Group, Sex, Age, donation_count, last_donation, Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, iron_complience, PreviousChildbirth, CRP, Cohort, donation_count_2, log_ferritin, log_last_donation, log_CRP, iron_deficiency, Region) %>%
+  dplyr::select(ID, Group, Sex, Age, donation_count, last_donation, Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, iron_complience, PreviousChildbirth, CRP, Cohort, donation_count_2, log_ferritin, log_last_donation, log_CRP, iron_deficiency, Region, Weight) %>%
   mutate(Age = scale(Age, scale = FALSE)[,1],
+         Weight = scale(Weight, scale = FALSE)[,1],
          log_CRP = scale(log_CRP, scale = FALSE)[,1],
          donation_count = scale(donation_count, scale = FALSE)[,1],
          log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
@@ -1193,8 +1196,9 @@ test_data_men <- regression_cohorts %>%
   filter(Group == "Men") 
 
 test_data_men <- test_data_men %>% 
-  dplyr::select(ID, Group, Sex, Age, donation_count, last_donation, Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, iron_complience, PreviousChildbirth, CRP, Cohort, donation_count_2, log_ferritin, log_last_donation, log_CRP, iron_deficiency, Region) %>%
+  dplyr::select(ID, Group, Sex, Age, donation_count, last_donation, Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, iron_complience, PreviousChildbirth, CRP, Cohort, donation_count_2, log_ferritin, log_last_donation, log_CRP, iron_deficiency, Region, Weight) %>%
   mutate(Age = scale(Age, scale = FALSE)[,1],
+         Weight = scale(Weight, scale = FALSE)[,1],
          log_CRP = scale(log_CRP, scale = FALSE)[,1],
          donation_count = scale(donation_count, scale = FALSE)[,1],
          log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
@@ -1280,49 +1284,24 @@ ggtitle("Men")
 ```{r, warning=FALSE}
 
 ggpairs(test_data_pre_women, ggplot2::aes(colour = Cohort, alpha = 0.5),
-        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI", "Menstruation", "Region"),
+        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI", "Menstruation", "Region", "Weight"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE) + 
 ggtitle("Premenopausal women")
 
 ggpairs(test_data_post_women, ggplot2::aes(colour = Cohort, alpha = 0.5), 
-        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI", "Region"),
+        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI", "Region", "Weight"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)+ 
 ggtitle("Postmenopausal women")
 
 ggpairs(test_data_men, ggplot2::aes(colour = Cohort, alpha = 0.5),
-        columns = c("log_ferritin", "iron_deficiency",  "RedMeat_n", "Smoking", "iron_complience", "BMI", "Region"),
+        columns = c("log_ferritin", "iron_deficiency",  "RedMeat_n", "Smoking", "iron_complience", "BMI", "Region", "Weight"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE) + 
 ggtitle("Men")
 
 ```
-```{r}
-ggpairs(test_data_pre_women, ggplot2::aes(colour = Cohort, alpha = 0.5),
-        columns = c("log_ferritin", "iron_deficiency", "Menstruation", "Region"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE) + 
-ggtitle("Premenopausal women")
-
-ggpairs(test_data_post_women, ggplot2::aes(colour = Cohort, alpha = 0.5), 
-        columns = c("log_ferritin", "iron_deficiency", "Region"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)+ 
-ggtitle("Postmenopausal women")
-
-ggpairs(test_data_men, ggplot2::aes(colour = Cohort, alpha = 0.5),
-        columns = c("log_ferritin", "iron_deficiency", "Region"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE) + 
-ggtitle("Men")
-
-```
-    
-    
