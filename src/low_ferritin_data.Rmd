@@ -34,6 +34,7 @@ library(epitools)
 library(ez)
 library(ggbeeswarm)
 library(tidymodels)
+library(kableExtra)
 
   # echo "rmarkdown::render('low_ferritin_data.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/low_ferritin_data_FIN.pdf')" | R --slave
 
@@ -1085,6 +1086,47 @@ summary_all_cohorts %>%
   summarise ( N = n()) %>% 
   kable() 
  
+```
+
+## Table 1
+
+```{r}
+myVars <- c("Age" ,
+  "Ferritin (ug/l)" 
+)
+non_normal_vars <- c("Ferritin (ug/l)")
+table1data <- summary_all_cohorts  %>%
+  rename(
+  "Age" = Age,
+  "Ferritin (ug/l)" = Ferritin
+)
+
+summary_table <- CreateTableOne(data = 
+                                  table1data,
+                                vars=myVars, 
+                                strata = c("Cohort","Sex"),
+                                test = FALSE)
+  
+tab3Mat <- print(summary_table, 
+                 nonnormal = non_normal_vars,
+                 vars=myVars, 
+                 quote = FALSE, 
+                 noSpaces = TRUE, 
+                 printToggle = FALSE)
+#
+colnames(tab3Mat) <- gsub("\\:",": ",colnames(tab3Mat))
+tab3Mat %>% 
+  kable() %>% 
+kable_styling(
+  full_width = F,
+  bootstrap_options = "striped", 
+  font_size = 8) %>% 
+  column_spec(
+    column = 2:7,
+    width = '1.5cm'
+  )
+  write.table(tab3Mat, 
+              file = paste0("../results/low_ferritin_data/table_1.txt"),sep="\t")
 ```
 
 
