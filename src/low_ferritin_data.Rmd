@@ -140,7 +140,7 @@ h2000$SP2 <- gsub("2", "Women", h2000$SP2)
  h2000_summary <- h2000 %>%
     filter(!is.na(FERRITIINI) & !is.na(B_Hb)) %>%
     group_by(RELEASE_ID) %>%
-    dplyr::select(IKA2, SP2, FERRITIINI, B_Hb, CRP, RELEASE_ID, BD03, BMII_BMI.x, FB05, synnytys, BD07, Cohort, MENOP, BD06, SHP_2000, BMII_PAINO.x) %>%
+    dplyr::select(IKA2, SP2, FERRITIINI, B_Hb, CRP, RELEASE_ID, BD03, BMII_BMI.x, FB05, synnytys, BD07, Cohort, MENOP, BD06, MP_2000, BMII_PAINO.x) %>%
     ungroup()  
   
 ```
@@ -204,7 +204,7 @@ names(h2000_summary)[names(h2000_summary) == "BD07"] <- "CurrentPregnancy"
 
 ## Region
 names(fr1997_summary)[names(fr1997_summary) == "ALUE"] <- "Region"
-names(h2000_summary)[names(h2000_summary) == "SHP_2000"] <- "Region"
+names(h2000_summary)[names(h2000_summary) == "MP_2000"] <- "Region"
 
 ## Weight
 names(blood_data_summary)[names(blood_data_summary) == "weight"] <- "Weight"
@@ -967,74 +967,41 @@ fr1997_summary_final <- fr1997_summary_final %>%
 
 ```
 
-Assign the participants from the capital region (Helsinki, Espoo and Vantaa) to "Helsinki" and everyone else to "other" under the Region variable. FinDonor study participants all come from the capital region.
+Assign the participants to regions based on university hospital districts. FinDonor study participants all come from the capital region.
 
 Health2000:
-	1	Uusimaa <- this one includes the capital region but also all other Uusimaa areas, don't use 
-	2	Helsinki <-  only Helsinki, we won't use Espoo and Vantaa for the Health2000 cohort
-	3	Varsinais-Suomi
-	4	Satakunta
-	5	Kanta-Häme
-	6	Pirkanmaa
-	7	Päijät-Häme
-	8	Kymenlaakso
-	9	Etelä-Karjala
-	10	Etelä-Savo
-	11	Itä-Savo
-	12	Pohjois-Karjala
-	13	Pohjois-Savo
-	14	Keski-Suomi
-	15	Etelä-Pohjanmaa
-	16	Vaasa
-	17	Keski-Pohjanmaa
-	18	Pohjois-Pohjanmaa
-	19	Kainuu
-	20	Länsi-Pohja
-	21	Lappi
-	22	Ahvenanmaa
-	
+	1	HYKS  
+	2	TYKS 
+	3	TAYS
+	4	KYS
+	5	OYS
+
+
 FinRisk97:
-  2 North Karelia 
-  3 North Savonia
-  4 Turku and Loimaa
-  5 Helsinki and Vantaa <-- use this one, does not include Espoo
-  6 Oulu province 
+  2 North Karelia --> KYS
+  3 North Savonia --> KYS
+  4 Turku and Loimaa --> TYKS
+  5 Helsinki and Vantaa --> HYKS
+  6 Oulu province --> OYS
 
 ```{r}
-blood_data_summary_final$Region <- "HKI"
+blood_data_summary_final$Region <- "HYKS"
 
 fr1997_summary_final <- fr1997_summary_final %>% 
   mutate(Region = case_when(
-    Region == "5" ~ "HKI",
-    Region == "2" ~ "other",
-    Region == "3" ~ "other",
-    Region == "4" ~ "other",
-    Region == "6" ~ "other"))
+    Region == "2" ~ "KYS",
+    Region == "3" ~ "KYS",
+    Region == "4" ~ "TYKS",
+    Region == "5" ~ "HYKS",
+    Region == "6" ~ "OYS"))
 
 h2000_summary_final <- h2000_summary_final %>% 
   mutate(Region = case_when(
-    Region == "2" ~ "HKI",
-    Region == "1" ~ "other",
-    Region == "3" ~ "other",
-    Region == "4" ~ "other",
-    Region == "5" ~ "other",
-    Region == "6" ~ "other",
-    Region == "7" ~ "other",
-    Region == "8" ~ "other",
-    Region == "9" ~ "other",  
-    Region == "10" ~ "other",
-    Region == "11" ~ "other",
-    Region == "12" ~ "other",   
-    Region == "13" ~ "other",
-    Region == "14" ~ "other",
-    Region == "15" ~ "other",
-    Region == "16" ~ "other",
-    Region == "17" ~ "other",
-    Region == "18" ~ "other",
-    Region == "19" ~ "other",
-    Region == "20" ~ "other",
-    Region == "21" ~ "other",
-    Region == "22" ~ "other"))
+    Region == "1" ~ "HYKS",
+    Region == "2" ~ "TYKS",
+    Region == "3" ~ "TAYS",
+    Region == "4" ~ "KYS",
+    Region == "5" ~ "OYS"))
 ```
 
 ## Merging cohorts into one table 

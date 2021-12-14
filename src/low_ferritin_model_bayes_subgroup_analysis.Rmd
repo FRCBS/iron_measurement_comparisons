@@ -90,9 +90,11 @@ The Region-variable only has one observation (HKI), since all blood donors are f
 Even later it turns out that imputing NA:s won't work in this stage of building the model, so it was removed completely.
 
 ```{r}
-regression_data_blood <- regression_data_blood
+#trying to see if we can get region to work, uncomment this if it doesn't work
 
-regression_data_blood$Region <- NA
+#regression_data_blood <- regression_data_blood
+
+#regression_data_blood$Region <- NA
 ```
 
 
@@ -134,7 +136,7 @@ logistic_pre_fr1997_b <- brm(iron_deficiency ~
                         #donation_count_2 + 
                         log_last_donation + 
                         log_CRP +
-                        #Region + 
+                        Region + 
                         Weight +
                         Menstruation, 
                       data = regression_data_fr1997, 
@@ -176,7 +178,7 @@ logistic_pre_h2000_b <- brm(iron_deficiency ~
                         #donation_count_2 + 
                         log_last_donation + 
                         log_CRP +
-                        #Region + 
+                        Region + 
                         Weight +
                         Menstruation, 
                       data = regression_data_h2000, 
@@ -306,7 +308,9 @@ regressor_values <- c(
     "iron_complience" = "Iron compliance",
     "donation_count_2" = "Donations in last 2 years",
     "Menstruationregular_period" = "Regular periods",
-    "Weight" = "Weight"
+    "Weight" = "Weight",
+    "Region" = "Region"
+ 
 )
 ```
 
