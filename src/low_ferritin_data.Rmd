@@ -129,7 +129,7 @@ fr1997$SUKUP <- gsub("2", "Women", fr1997$SUKUP)
 fr1997_summary <- fr1997 %>%
   filter(!is.na(FERRITIN)) %>%
   group_by(RELEASE_ID) %>%
-  dplyr::select(IKA, SUKUP, FERRITIN, HGB, CRP, RELEASE_ID, K129, BMI, KY100_22, Q69, KY163, GRAVID, Cohort, ALUE, PAINO) %>%
+  dplyr::select(IKA, SUKUP, FERRITIN, HGB, CRP, RELEASE_ID, K129, BMI, KY100_22, KY163, GRAVID, Cohort, ALUE, PAINO, TUPI3) %>%
   ungroup()
 
 #HEALTH2000
@@ -140,7 +140,7 @@ h2000$SP2 <- gsub("2", "Women", h2000$SP2)
  h2000_summary <- h2000 %>%
     filter(!is.na(FERRITIINI) & !is.na(B_Hb)) %>%
     group_by(RELEASE_ID) %>%
-    dplyr::select(IKA2, SP2, FERRITIINI, B_Hb, CRP, RELEASE_ID, BD03, BMII_BMI.x, FB05, synnytys, BD07, Cohort, MENOP, BD06, MP_2000, BMII_PAINO.x) %>%
+    dplyr::select(IKA2, SP2, FERRITIINI, B_Hb, CRP, RELEASE_ID, BD03, BMII_BMI.x, FB01, FB02, FB03, FB05, synnytys, BD07, Cohort, MENOP, BD06, MP_2000, BMII_PAINO.x) %>%
     ungroup()  
   
 ```
@@ -180,7 +180,10 @@ names(h2000_summary)[names(h2000_summary) == "BMII_BMI.x"] <- "BMI"
 
 ## Smoking
 names(blood_data_summary)[names(blood_data_summary) == "QR54"] <- "Smoking"
-names(fr1997_summary)[names(fr1997_summary) == "Q69"] <- "Smoking"
+names(fr1997_summary)[names(fr1997_summary) == "TUPI3"] <- "Smoking"
+names(h2000_summary)[names(h2000_summary) == "FB01"] <- "EverSmoked"
+names(h2000_summary)[names(h2000_summary) == "FB02"] <- "Smoked100"
+names(h2000_summary)[names(h2000_summary) == "FB03"] <- "RegSmoked"
 names(h2000_summary)[names(h2000_summary) == "FB05"] <- "Smoking"
 
 ## Red meat
@@ -548,6 +551,53 @@ h2000_summary_final <- h2000_summary_final %>%
 
 ```
 
+Finally, we will need the smoking variables to just give us informaton on current smoking behaviour, not past smoking. This does not need to be done in the FinDonor cohort, as the variable gives us the information we want as it is.
+
+FinRisk97:
+TUPI3 was the chosen variable. It's a mutation built out of four separate variables in the FinRisk questionnaire:
+1=Never smoked regurarly --> 0
+2=Stopped smoking >1/2 years ago --> 0
+3=Stopped smoking <1/2 years ago --> 0
+4=Smokes --> 1
+
+
+Health00:
+
+For this cohort there was no mutated variable avaliable, so we had to build our own from the following avaliable questions:
+
+FB01. Have you ever smoked during your life time?
+1 yes
+0 no → GA01
+FB02. Have you smoked at least 100 times during your life time (cigarettes, cigars or pipe tobacco)?
+1 yes
+0 no → GA01 
+FB03. Have you ever smoked daily for at least one year?
+1 yes
+0 no → FB05
+FB05. Do you smoke nowadays (cigarettes, cigars or pipe):
+1 daily
+2 occasionally
+3 not at all
+
+People who have never smoked (FB01=EverSmoked), have smoked <100 cigarettes in their lifetime (FB02=Smoked100), have not smoked daily for at least 1 year (FB03=SmokedReg) or smoke occasionally/not at all (FB05=Smoking) are imputed as non-smokers (0). Participants who report daily smoking (FB05=Smoking) are imputed as smokers (1).
+
+```{r}
+# FinRisk97
+fr1997_summary_final <- fr1997_summary_final %>% 
+  mutate(Smoking = case_when(
+    Smoking == "4" ~ 1,
+    Smoking %in% c("1", "2", "3") ~ 0))
+  
+# Health2000
+h2000_summary_final <- h2000_summary_final %>% 
+  mutate(Smoking = case_when(
+            Smoking == "1" ~ 1,
+            Smoking %in% c("2" , "3") ~ 0,
+            EverSmoked == "0" ~ 0,
+            Smoked100 == "0" ~ 0,
+            RegSmoked == "0" ~ 0))
+```
+
 ## Remove cohort participants with missing data
 
 ### Donation history
@@ -602,11 +652,7 @@ h2000_summary_final <- h2000_summary_final %>%
 We remove "cohort_name %>% filter(is.na(BMI)) %>% nrow()" participants for whom we do not have smoking data:
   * FinDonor: `r blood_data_summary_final %>% filter(is.na(Smoking)) %>% nrow()`
   * FinRisk97: `r fr1997_summary_final  %>% filter(is.na(Smoking)) %>% nrow()`
-           * `r fr1997 %>%  filter(is.na(Q69)) %>%  nrow()` 43 % missing
-  * Health2000: 2153 `r h2000_summary_final %>% filter(is.na(Smoking)) %>% nrow()` 
-           * `r h2000 %>%  filter(is.na(FB05)) %>%  nrow()` 44 % missing
-    
-As removing n/a:s for smoking removes >5000 general population participants as opposed to only one in the blood donor cohort, we suspect there being something wrong with the original data. Looking at the original rdata makes it clear this is not a coding error. At this point we impute the n/a:s for the general population cohorts as non-smokers, while we wait for THL to explain the missing data. 
+  * Health2000: `r h2000_summary_final %>% filter(is.na(Smoking)) %>% nrow()` 
 
 ```{r}
 # FinDonor
@@ -617,8 +663,6 @@ blood_data_summary_final <- blood_data_summary_final %>%
   filter(!is.na(Smoking))
 
 # FinRisk97
-fr1997_summary_final$Smoking[is.na(fr1997_summary_final$Smoking)]  <- 3
-
 nb_removed_fr97 <- nb_removed_fr97 +
                             fr1997_summary_final %>% filter(is.na(Smoking)) %>% nrow()
 
@@ -640,8 +684,8 @@ h2000_summary_final <- h2000_summary_final %>%
 
 We remove "cohort_name %>% filter((group != "Men" & is.na(PreviousChildbirth)))%>% nrow()" female donors who did not answer the question on childbirth: 
   * FinDonor: `r blood_data_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
-  * FinRisk97: 16 `r fr1997_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
-  * Health2000: 6 `r h2000_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
+  * FinRisk97: `r fr1997_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
+  * Health2000: `r h2000_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
 
 ```{r}
 #### FinDonor
@@ -882,6 +926,10 @@ h2000_summary_final %>%
  
 ```
 
+## Recode variables
+
+### Red meat
+
 Next we recode red meat consumption into a linear variable. We use a linear scale from 1 to 4 for and mapped the different responses to correspond to the four options for the FinDonor and FinRisk97 cohorts. Data on red meat consumption was not avaliable in the Health2000 cohort.  
 
 * red meat:
@@ -934,6 +982,8 @@ h2000_summary_final$RedMeat_n <- NA
 
 ```
 
+### CRP
+
 Due to difference in the CRP measurements (hs-CRP for the general population cohorts, CRP for the blood donor cohort) we decided to impute CRP <3 mg/l to 2.9 mg/l for the general population cohorts in order to align them with the blood donor data. CRP <3 mg/l was previously imputed as 2.9 mg/ml in the blood donor cohort.
 
 ```{r}
@@ -943,6 +993,8 @@ fr1997_summary_final$CRP[fr1997_summary_final$CRP < 3.0] <- 2.9
 # Health2000
 h2000_summary_final$CRP[h2000_summary_final$CRP < 3.0] <- 2.9
 ```
+
+### Previous childbirth
 
 Previous childbirth is recoded 
 * FinDonor: have you given birth? no=no, yes=yes
@@ -966,6 +1018,8 @@ fr1997_summary_final <- fr1997_summary_final %>%
     
 
 ```
+
+### Regions
 
 Assign the participants to regions based on university hospital districts. FinDonor study participants all come from the capital region.
 
