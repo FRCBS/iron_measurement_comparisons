@@ -8,11 +8,29 @@ output: pdf_document
 
 # Summary
 
-This code is based on Mikko Arvas' Bayesian model for iron deficiency, "Low ferritin model" (https://github.com/FRCBS/iron_measurement_comparisons/blob/master/src/low_ferritin_model_bayes.Rmd). In this analysis we analyse iron deficiency risk factors in pre-menopausal women.
+This code is based on Mikko Arvas' Bayesian model for iron deficiency, "Low ferritin model" (https://github.com/FRCBS/iron_measurement_comparisons/blob/master/src/low_ferritin_model_bayes.Rmd). In this analysis we analyse iron deficiency risk factors in pre-menopausal women. This subgroup analysis also allows us to compare the model to premenopausal women in Lobier et al. 2019 (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6692066/).
+
+Version 1 includes the imputed blood donation observations for the general cohorts. These were imputed as random intervals (3-6 years, see low ferritin data code). 
+
+All variables:
+
+Age  
+BMI  
+Smoking
+iron_complience (only blood donor cohort)
+donation_count_2 (only blood donor cohort)
+donation_count (only blood donor cohort)
+log_last_donation
+log_CRP 
+Region (not in blood donor cohort)
+Weigh
+Menstruation
+RedMeat_n (not in h2000 cohort)
+PreviousChildbirth
 
 ```{r setup, , message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-# echo "rmarkdown::render('low_ferritin_model_bayes_subgroup_analysis.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/low_ferritin_model_bayes_subgroup_analysis.pdf')" | R --slave
+# echo "rmarkdown::render('version1_low_ferritin_model_bayes_subgroup_analysis.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/bmodels_subgroup/version1_low_ferritin_model_bayes_subgroup_analysis/version1_low_ferritin_model_bayes_subgroup_analysis.pdf')" | R --slave
 
 library(tidyverse)
 library(brms)
@@ -45,7 +63,7 @@ all_cohorts <- all_cohorts %>%
 # FinDonor
 regression_data_blood <- all_cohorts %>% 
   filter(Cohort == "FINDONOR") %>% 
-  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, iron_deficiency, Smoking, iron_complience, Region, Weight, Menstruation) %>%
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, iron_deficiency, Smoking, iron_complience, Region, Weight, Menstruation, RedMeat_n, PreviousChildbirth) %>%
   mutate(Age = scale(Age, scale = FALSE)[,1],
          Weight = scale(Weight, scale = FALSE)[,1],
          log_CRP = scale(log_CRP, scale = FALSE)[,1],
@@ -57,7 +75,7 @@ regression_data_blood <- all_cohorts %>%
 # FinRisk97
 regression_data_fr1997 <- all_cohorts %>% 
   filter(Cohort == "FINRISK97") %>% 
-  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, iron_deficiency, Smoking, iron_complience, Region, Weight, Menstruation) %>%
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, iron_deficiency, Smoking, iron_complience, Region, Weight, Menstruation, RedMeat_n, PreviousChildbirth) %>%
   mutate(Age = scale(Age, scale = FALSE)[,1],
          Weight = scale(Weight, scale = FALSE)[,1],
          log_CRP = scale(log_CRP, scale = FALSE)[,1],
@@ -69,7 +87,7 @@ regression_data_fr1997 <- all_cohorts %>%
 # Health2000 
 regression_data_h2000 <- all_cohorts %>% 
   filter(Cohort == "HEALTH00") %>% 
-  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, iron_deficiency, Smoking, iron_complience, Region, Weight, Menstruation) %>%
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, iron_deficiency, Smoking, iron_complience, Region, Weight, Menstruation, RedMeat_n, PreviousChildbirth) %>%
   mutate(Age = scale(Age, scale = FALSE)[,1],
          Weight = scale(Weight, scale = FALSE)[,1],
          log_CRP = scale(log_CRP, scale = FALSE)[,1],
@@ -85,21 +103,10 @@ regression_data_h2000 <- all_cohorts %>%
 
 ### FinDonor
 
-The Region-variable only has one observation (HKI), since all blood donors are from Helsinki or Espoo. As the code will not run as long as Region is included, it was removed for the FinDonor cohort by imputing all observations to NA (we later find out just removing it won't allow the code to run when combining).
-
-Even later it turns out that imputing NA:s won't work in this stage of building the model, so it was removed completely.
-
-```{r}
-#trying to see if we can get region to work, uncomment this if it doesn't work
-
-#regression_data_blood <- regression_data_blood
-
-#regression_data_blood$Region <- NA
-```
-
+The Region-variable only has one observation (HYKS) in FinDonor, since all blood donors are from Helsinki or Espoo. As the code will not run as long as Region is included, it was removed for the FinDonor cohort.
 
 ```{r blood}
-file <- "../results/bmodels_subgroup/logit_pre_blood_b"
+file <- "../results/bmodels_subgroup/version1_low_ferritin_model_bayes_subgroup_analysis/logit_pre_blood_b"
 
 logistic_pre_blood_b <- brm(iron_deficiency ~ 
                         Age + 
@@ -107,11 +114,14 @@ logistic_pre_blood_b <- brm(iron_deficiency ~
                         Smoking + 
                         iron_complience + 
                         donation_count_2 + 
+                        donation_count +
                         log_last_donation + 
                         log_CRP +
                         #Region + 
                         Weight +
-                        Menstruation, 
+                        Menstruation + 
+                        RedMeat_n +
+                        PreviousChildbirth,
                       data = regression_data_blood, 
                       family = bernoulli(),
                       file=file, 
@@ -126,7 +136,7 @@ summary(logistic_pre_blood_b)
 FinRisk97
 
 ```{r fr1997}
-file <- "../results/bmodels_subgroup/logit_pre_fr1997_b"
+file <- "../results/bmodels_subgroup/version1_low_ferritin_model_bayes_subgroup_analysis/logit_pre_fr1997_b"
 
 logistic_pre_fr1997_b <- brm(iron_deficiency ~ 
                         Age + 
@@ -134,11 +144,14 @@ logistic_pre_fr1997_b <- brm(iron_deficiency ~
                         Smoking + 
                         #iron_complience + 
                         #donation_count_2 + 
+                        #donation_count + 
                         log_last_donation + 
                         log_CRP +
                         Region + 
                         Weight +
-                        Menstruation, 
+                        Menstruation + 
+                        RedMeat_n +
+                        PreviousChildbirth, 
                       data = regression_data_fr1997, 
                       family = bernoulli(),
                       file=file, 
@@ -147,40 +160,41 @@ logistic_pre_fr1997_b <- brm(iron_deficiency ~
 )
 
 summary(logistic_pre_fr1997_b)
-
-
 ```
 
 Hmm, there are problems with this cohort. Warning message: 
 
-There were 5357 transitions after warmup that exceeded the maximum treedepth. Increase max_treedepth above 10. See
+There were 1481 transitions after warmup that exceeded the maximum treedepth. Increase max_treedepth above 10. See
 http://mc-stan.org/misc/warnings.html#maximum-treedepth-exceededExamine the pairs() plot to diagnose sampling problems
-The largest R-hat is 1.92, indicating chains have not mixed.
+The largest R-hat is 1.45, indicating chains have not mixed.
 Running the chains for more iterations may help. See
 http://mc-stan.org/misc/warnings.html#r-hatBulk Effective Samples Size (ESS) is too low, indicating posterior means and medians may be unreliable.
 Running the chains for more iterations may help. See
 http://mc-stan.org/misc/warnings.html#bulk-essTail Effective Samples Size (ESS) is too low, indicating posterior variances and tail quantiles may be unreliable.
 Running the chains for more iterations may help. See
-http://mc-stan.org/misc/warnings.html#tail-essParts of the model have not converged (some Rhats are > 1.05). Be careful when analysing the results! We recommend running more iterations and/or setting stronger priors. Family: bernoulli 
+http://mc-stan.org/misc/warnings.html#tail-essParts of the model have not converged (some Rhats are > 1.05). Be careful when analysing the results! We recommend running more iterations and/or setting stronger priors. 
 
---> solved this by removing the variables iron_complience and donation_count_2 (found these to mess up the diagnostics in the later stages). Donation count were imputed as a randomized number between 3-6 years in the general population cohorts (see low_ferritin_data) as we didn't have this information. We also don't have data on iron supplementation in the general population cohorts so all observations were imputed as 0.
+This was solved by removing the variables iron_complience, donation_count and donation_count_2 (diagnostics in the later stage of this analysis also suggested these variables don't work). Donation count were imputed as a randomized number between 3-6 years in the general population cohorts (see low_ferritin_data) and donations in the past two years as 0 as we didn't have this information. We also don't have data on iron supplementation in the general population cohorts so all observations were imputed as 0.
 
 ## Health00
 
 ```{r h2000}
-file <- "../results/bmodels_subgroup/logit_pre_h2000_b"
+file <- "../results/bmodels_subgroup/version1_low_ferritin_model_bayes_subgroup_analysis/logit_pre_h2000_b"
 
 logistic_pre_h2000_b <- brm(iron_deficiency ~ 
                         Age + 
                         BMI + 
                         Smoking + 
                         #iron_complience + 
-                        #donation_count_2 + 
+                        #donation_count_2 +
+                        #donation_count + 
                         log_last_donation + 
                         log_CRP +
                         Region + 
                         Weight +
-                        Menstruation, 
+                        Menstruation + 
+                        #RedMeat_n +
+                        PreviousChildbirth, 
                       data = regression_data_h2000, 
                       family = bernoulli(),
                       file=file, 
@@ -191,7 +205,7 @@ logistic_pre_h2000_b <- brm(iron_deficiency ~
 summary(logistic_pre_h2000_b)
 ``` 
 
-There are problems with this cohort as well, same warning message. Solved this as explained for FinRisk97.
+There are problems with this cohort as well, same warning message. Solved this as explained for FinRisk97. Red meat consumption was also removed as the Health2000 didn't contain information on this.
 
 ## Diagnostics
 
@@ -292,30 +306,30 @@ p <- p + scale_x_log10()
 p
 ```
 
-
-These all look strange compared to the ones in the main analysis (men and post-menopausal women included), not sure about the two colours, is it the CI?
-
-
 ### All groups together
 
 ```{r}
 regressor_values <- c(
- "Age" = "Age",
-   "log_CRP" = "log(CRP)",
+ "Age" = "Age (5 years)",
+   "log_CRP" = "CRP (log transformed)",
    "BMI" = "BMI",
-   "log_last_donation" = "log(days to last donation)",
+   "log_last_donation" = "Days since last donation (log, /log(2))",
    "Smokingyes" ="Smoker",
-    "iron_complience" = "Iron compliance",
-    "donation_count_2" = "Donations in last 2 years",
+    "iron_complience" = "Iron supplementation",
+    "donation_count_2" = "Donations in last 2 years (quadratic)",
     "Menstruationregular_period" = "Regular periods",
-    "Weight" = "Weight",
-    "Region" = "Region"
+    "Weight" = "Weight (10 kg)",
+    "Region" = "Region",
+    "RedMeat_n" = "Red meat",
+    "PreviousChildbirth" = "Given birth in the past",
+    "RegionTYKS" = "Region (Turku university hospital)",
+    "RegionTAYS" = "Region (Tampere university hospital)",
+    "RegionOYS" = "Region (Oulu university hospital)",
+    "RegionKYS" = "Region (Kuopio university hospital)",
+    "donation_count" = "Donations in last 2 years"
  
 )
 ```
-
-
-
 
 ```{r }
 
@@ -353,7 +367,6 @@ intervals_combined <- rbind(intervals_pre_blood,intervals_pre_fr1997,intervals_p
 
 
 ```
-
 
 ```{r , fig1, fig.height = 10, fig.width = 15 ,warning=FALSE}
 
@@ -406,101 +419,19 @@ p <- ggplot(plotdata, aes(x = m, y = regressor, color = Cohort)) +
 
 p
 
-
 ```
 
+Compared to Lobier et al. 2019 CRP has a noticeably larger effect. This can be explained by the larger data set we have in this analysis. The blood donation variables that were imputed do not seem to distort the results, so for the purpose of merging our data we can keep the variable.  
+
 ```{r}
-
-
-ggplot2::ggsave(filename = "../results/figures/subgroup_analysis/forest_pre_women_all_cohorts_bayes.pdf",
+ggplot2::ggsave(filename = "../results/figures/subgroup_analysis/version1_forest_pre_women_all_cohorts_bayes.pdf",
                 plot = p,
                 width = 35,
                 height = 25,
                 dpi = 600,
                 units = "cm")
 
-
-```
-
-
-## Compare to bootstrapped
-
-This need to be redone once we have done a subgroup analysis in the bootsrapped code, as of now we don't have one. (change group to cohort!)
-
-```{r  fig2, fig.height = 15, fig.width = 10 ,warning=FALSE}
-file <- "../results/bootstraps/plotdata_pre_women_filtered.rdata" #this I already changed, nothing else has been done
-# if(file.exists(file)) {
-#   load(file)
-#   temp <- plotdata_filtered %>% select(-p.value,-is_sig) %>% 
-#     rename(ll = Bca_inf,
-#            hh = Bca_sup,
-#            m = OR
-#     ) %>%  mutate(
-#       Method = "Bayes"
-#     ) %>%  rename(Group=group)
-#   
-#   temp <- plotdata %>%  select(regressor,ll,hh,m,Group) %>% 
-#     mutate(Method="Boot") %>% 
-#   bind_rows(temp)
-#   
-#   temp <- temp %>% 
-#     mutate(
-#       ll = case_when(
-#         ll < orlower ~ orlower,
-#         TRUE ~ ll
-#       ),
-#       hh = case_when(
-#         hh > orupper ~ orupper,
-#         TRUE ~ hh
-#       )
-#     )
-#   
-#   pos <- position_nudge(y=as.numeric(as.factor(temp$Method))/5 -0.1) 
-#   
-#   p <- ggplot(temp, aes(x = m, y = regressor, color = Method)) + 
-#      geom_point(position = pos,
-#                 size=4) +
-#     geom_linerange(aes(xmin = ll, xmax = hh), 
-#                    position = pos,
-#                    size = 1 
-#     ) +
-#     # scale_color_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
-#     #                    limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
-#     # scale_fill_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
-#     #                   limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
-#     #scale_shape_manual(values = c(1,16)) +
-#     scale_x_log10(limits=c(orlower,orupper))  + #how to get the lines that drop out of the visible?  
-#     geom_vline(xintercept = 1 , color = "grey", linetype = "dotted",
-#                size = 1) +
-#     theme(axis.title = element_text(size = 14),
-#           strip.text =  element_text(size = 14),
-#           legend.text = element_text(size = 12),
-#           strip.background = element_rect(fill = "white"),
-#           strip.background.x = element_blank(),
-#           axis.text.x = element_text(size = 14),
-#           axis.text.y = element_text(size = 14)
-#     ) +
-#     guides(shape = "none") +
-#     theme_classic() +
-#     facet_grid(Group~.) +
-#     ylab("Coefficient") 
-#   
-#   p
-#   
-#   
-# }
-```
-
-
-```{r}
-# if(file.exists(file)) {
-# 
-# ggplot2::ggsave(filename = "../results/figures/forest_all_cohorts_bayes_vs_boot.pdf",
-#                 plot = p,
-#                 width = 35,
-#                 height = 30,
-#                 dpi = 600,
-#                 units = "cm")
-# }
-
+# save ORs for comparison with other models 
+OR_logistic_subgroup_pre <- plotdata
+save(OR_logistic_subgroup_pre, file = "../data/OR_low_ferritin_model_subgroup_analysis.rdata")
 ```
