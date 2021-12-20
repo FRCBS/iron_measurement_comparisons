@@ -1,0 +1,267 @@
+---
+title: "Comparison of ID models"   
+author: "Sofie Ekroos"
+date: "16.12.2021"
+output: pdf_document
+
+---
+
+# Summary
+
+This code allows the user to compare the linear model of ferritin to the logistic model for iron deficiency.
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+# echo "rmarkdown::render('version1__subgroup_ferritin_comparison.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/bmodels_subgroup/ferritin_comparison/version1__subgroup_ferritin_comparison.pdf')" | R --slave
+
+library(tidyverse)
+library(brms)
+library(bayesplot)
+library(ggplot2)
+library(ggpubr)
+theme_set(theme_pubr())
+```
+
+# Load OR:s
+
+```{r}
+# logistic (ID model)
+load("../data/OR_low_ferritin_model_subgroup_analysis.rdata")
+logistic <- OR_logistic_subgroup_pre
+
+# linear (ferritin model)
+load("../data/OR_ferritin_model_subgroup_analysis.rdata")
+linear <- OR_linear_subgroup_pre
+
+rm(OR_linear_subgroup_pre, OR_logistic_subgroup_pre)
+```
+
+# Table for logistic model
+
+```{r , fig1, fig.height = 10, fig.width = 15 ,warning=FALSE}
+orlower <- 1/10
+orupper <- 10
+
+# Truncate ORs for plotting
+logistic <- logistic %>%
+  mutate(
+    ll = case_when(
+      ll < orlower ~ orlower,
+      TRUE ~ ll
+    ),
+    hh = case_when(
+      hh > orupper ~ orupper,
+      TRUE ~ hh
+    )
+  )
+
+
+#theme_set(bayesplot::theme_default())
+pos <- position_nudge(y=as.numeric(as.factor(logistic$Cohort))/5 -0.1) 
+
+p_log <- ggplot(logistic, aes(x = m, y = regressor, color = Cohort)) + 
+  geom_point(position = pos,
+             size=4) +
+  geom_linerange(aes(xmin = ll, xmax = hh), 
+                 position = pos,
+                 size = 1, 
+                 linetype = 1
+                 ) +
+  scale_color_manual(values = c("#FF7B89", "#6F5F90", "#758EB7"),
+                     limits = c("FINDONOR",  "FINRISK97","HEALTH00")) +
+  scale_fill_manual(values = c("#FF7B89", "#6F5F90", "#758EB7"),
+                    limits = c("FINDONOR",  "FINRISK97","HEALTH00")) +
+  scale_shape_manual(values = c(1,16)) +
+  scale_x_log10(limits=c(orlower,orupper))  + #how to get the lines that drop out of the visible?  
+  geom_vline(xintercept = 1 , color = "grey", linetype = "dotted",
+             size = 1) +
+  theme(axis.title = element_text(size = 14),
+        strip.text =  element_text(size = 14),
+        legend.text = element_text(size = 12),
+        strip.background = element_rect(fill = "white"),
+        strip.background.x = element_blank(),
+        axis.text.x = element_text(size = 14),
+        axis.text.y = element_text(size = 14)
+  ) +
+  guides(shape = "none") +
+  theme_classic() +
+  ylab("Coefficient") + 
+  ggtitle("ID model (logistic)")
+
+
+p_log + theme(plot.title = element_text(face = "bold", hjust = 0.5))
+
+```
+
+# Table for linear model 
+
+```{r , fig2, fig.height = 10, fig.width = 15 ,warning=FALSE}
+
+orlower <- -1
+orupper <- 1
+
+# Truncate ORs for plotting
+linear <- linear %>% 
+  mutate(
+    ll = case_when(
+      ll < orlower ~ orlower,
+      TRUE ~ ll
+    ),
+    hh = case_when(
+      hh > orupper ~ orupper,
+      TRUE ~ hh
+    )
+  )
+
+#theme_set(bayesplot::theme_default())
+pos <- position_nudge(y=as.numeric(as.factor(linear$Cohort))/5 -0.1) 
+
+p_lin <- ggplot(linear, aes(x = m, y = regressor, color = Cohort)) + 
+  geom_point(position = pos,
+             size=4) +
+  geom_linerange(aes(xmin = ll, xmax = hh), 
+                 position = pos,
+                 size = 1, 
+                 linetype = 1
+                 ) +
+  scale_color_manual(values = c("#FF7B89", "#6F5F90", "#758EB7"),
+                     limits = c("FINDONOR",  "FINRISK97","HEALTH00")) +
+  scale_fill_manual(values = c("#FF7B89", "#6F5F90", "#758EB7"),
+                    limits = c("FINDONOR",  "FINRISK97","HEALTH00")) +
+  scale_shape_manual(values = c(1,16)) +
+  xlim(orlower,orupper)  +   
+  geom_vline(xintercept = 0 , color = "grey", linetype = "dotted",
+             size = 1) +
+  theme(axis.title = element_text(size = 14),
+        strip.text =  element_text(size = 14),
+        legend.text = element_text(size = 12),
+        strip.background = element_rect(fill = "white"),
+        strip.background.x = element_blank(),
+        axis.text.x = element_text(size = 14),
+        axis.text.y = element_text(size = 14)
+  ) +
+  guides(shape = "none") +
+  theme_classic() +
+  ylab("Coefficient")  + 
+  ggtitle("Ferritin model (linear)")
+
+p_lin + theme(plot.title = element_text(face = "bold", hjust = 0.5)) 
+
+
+```
+
+# Combine linear and logistic tables 
+
+```{r , fig3, fig.height = 10, fig.width = 30 ,warning=FALSE}
+figure_col <- ggarrange(p_log, p_lin,
+                    labels = c("A", "B"),
+                    ncol = 2, nrow = 1)
+figure_col
+```
+
+
+```{r , fig4, fig.height = 20, fig.width = 15 ,warning=FALSE}
+figure_row <- ggarrange(p_log, p_lin,
+                    labels = c("A", "B"),
+                    ncol = 1, nrow = 2)
+figure_row 
+```
+
+# Rotate x-axis for linear model
+
+```{r , fig5, fig.height = 10, fig.width = 15 ,warning=FALSE}
+orlower <- -1
+orupper <- 1
+
+# Truncate ORs for plotting
+linear_reverse <- linear %>% 
+  mutate(
+    ll = case_when(
+      ll < orlower ~ orlower,
+      TRUE ~ ll
+    ),
+    hh = case_when(
+      hh > orupper ~ orupper,
+      TRUE ~ hh
+    )
+  )
+
+#theme_set(bayesplot::theme_default())
+pos <- position_nudge(y=as.numeric(as.factor(linear_reverse$Cohort))/5 -0.1) 
+
+p_lin_reversed <- ggplot(linear_reverse, aes(x = m, y = regressor, color = Cohort)) + 
+  geom_point(position = pos,
+             size=4) +
+  geom_linerange(aes(xmin = ll, xmax = hh), 
+                 position = pos,
+                 size = 1, 
+                 linetype = 1
+                 ) +
+  scale_color_manual(values = c("#FF7B89", "#6F5F90", "#758EB7"),
+                     limits = c("FINDONOR",  "FINRISK97","HEALTH00")) +
+  scale_fill_manual(values = c("#FF7B89", "#6F5F90", "#758EB7"),
+                    limits = c("FINDONOR",  "FINRISK97","HEALTH00")) +
+  scale_shape_manual(values = c(1,16)) +
+  xlim(orlower,orupper)  +   
+  geom_vline(xintercept = 0 , color = "grey", linetype = "dotted",
+             size = 1) +
+  theme(axis.title = element_text(size = 14),
+        strip.text =  element_text(size = 14),
+        legend.text = element_text(size = 12),
+        strip.background = element_rect(fill = "white"),
+        strip.background.x = element_blank(),
+        axis.text.x = element_text(size = 14),
+        axis.text.y = element_text(size = 14)
+  ) +
+  guides(shape = "none") +
+  theme_classic() +
+  ylab("Coefficient")  + 
+  ggtitle("Ferritin model (linear, reversed)")
+
+p_lin_reversed + scale_x_reverse()
+
+reversed <- p_lin_reversed + scale_x_reverse()
+
+reversed
+
+```
+
+# Combine ID and rotated ferritin models 
+
+```{r , fig6, fig.height = 20, fig.width = 15 ,warning=FALSE}
+# 2 rows
+figure_row_rev <- ggarrange(p_log, reversed,
+                    labels = c("A", "B"),
+                    ncol = 1, nrow = 2)
+figure_row_rev 
+```
+
+```{r , fig7, fig.height = 10, fig.width = 30 ,warning=FALSE}
+# 2 columns
+figure_col_rev <- ggarrange(p_log, reversed,
+                    labels = c("A", "B"),
+                    ncol = 2, nrow = 1)
+figure_col_rev 
+
+```
+
+# Save graphs
+
+```{r}
+# original
+ggplot2::ggsave(filename = "../results/figures/subgroup_analysis/model_comparison/version1_forest_comparison.pdf",
+                plot = figure_col,
+                width = 65,
+                height = 25,
+                dpi = 600,
+                units = "cm")
+
+# ferritin model rotated  
+ggplot2::ggsave(filename = "../results/figures/subgroup_analysis/model_comparison/version1_forest_comparison_reversed.pdf",
+                plot = figure_col_rev,
+                width = 65,
+                height = 25,
+                dpi = 600,
+                units = "cm")
+```
+
