@@ -11,7 +11,7 @@ output: pdf_document
 
 This code is based on Mikko Arvas' Bayesian model for ferritin, "Ferritin model" (https://github.com/FRCBS/iron_measurement_comparisons/blob/master/src/ferritin_model_bayes.Rmd). In this analysis we analyse ferritin levels in pre-menopausal women.
 
-Version 1 includes the imputed blood donation observations for the general cohorts. These were imputed as random intervals (3-6 years, see low ferritin data code). 
+Version 2: blood donation variables removed completely for general population.
 
 All variables:
 
@@ -20,8 +20,8 @@ BMI
 Smoking
 iron_complience (only blood donor cohort)
 donation_count_2 (only blood donor cohort)
-donation_count
-log_last_donation
+donation_count (only blood donor cohort)
+log_last_donation (only blood donor cohort)
 log_CRP 
 Region (not in blood donor cohort)
 Weigh
@@ -108,7 +108,7 @@ Running the diagnostics in this code, we can see that chains do not mix properly
 ### FinDonor
 
 ```{r blood}
-file <- "../results/bmodels_subgroup/version1_ferritin_model_subgroup_analysis/linear_blood_b"
+file <- "../results/bmodels_subgroup/version2_ferritin_model_subgroup_analysis/linear_blood_b"
 
 linear_blood_b <- brm(log_ferritin ~ 
                         Age + 
@@ -138,7 +138,7 @@ summary(linear_blood_b)
 ### FinRisk97
 
 ```{r  fr1997}
-file <- "../results/bmodels_subgroup/version1_ferritin_model_subgroup_analysis/linear_fr1997_b"
+file <- "../results/bmodels_subgroup/version2_ferritin_model_subgroup_analysis/linear_fr1997_b"
 
 linear_fr1997_b <- brm(log_ferritin ~ 
                         Age + 
@@ -147,7 +147,7 @@ linear_fr1997_b <- brm(log_ferritin ~
                         #iron_complience + 
                         #donation_count_2 + 
                         #donation_count +
-                        log_last_donation + 
+                        #log_last_donation + 
                         log_CRP +
                         Region + 
                         Weight +
@@ -169,7 +169,7 @@ summary(linear_fr1997_b)
 ### Health2000
 
 ```{r  h2000}
-file <- "../results/bmodels_subgroup/version1_ferritin_model_subgroup_analysis/linear_h2000_b"
+file <- "../results/bmodels_subgroup/version2_ferritin_model_subgroup_analysis/linear_h2000_b"
 
 linear_h2000_b <- brm(log_ferritin ~ 
                         Age + 
@@ -178,7 +178,7 @@ linear_h2000_b <- brm(log_ferritin ~
                         #iron_complience + 
                         #donation_count_2 + 
                         #donation_count +
-                        log_last_donation + 
+                        #log_last_donation + 
                         log_CRP +
                         Region + 
                         Weight +
@@ -411,7 +411,8 @@ p <- ggplot(plotdata, aes(x = m, y = regressor, color = Cohort)) +
   ) +
   guides(shape = "none") +
   theme_classic() +
-  ylab("Coefficient") 
+  ylab("Coefficient")  + 
+  ggtitle("Ferritin model (premenopausal women, version 2)") 
 
 p
 
@@ -421,7 +422,7 @@ p
 ```{r}
 
 
-ggplot2::ggsave(filename = "../results/figures/subgroup_analysis/version1_forest_subgroup_analysis_bayes_ferritin.pdf",
+ggplot2::ggsave(filename = "../results/figures/subgroup_analysis/version2_forest_subgroup_analysis_bayes_ferritin.pdf",
                 plot = p,
                 width = 35,
                 height = 25,
