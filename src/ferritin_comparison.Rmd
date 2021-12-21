@@ -12,7 +12,7 @@ This code allows the user to compare the linear model of ferritin to the logisti
 
 ```{r}
 knitr::opts_chunk$set(echo = TRUE)
-# echo "rmarkdown::render('version2__subgroup_ferritin_comparison.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/bmodels_subgroup/ferritin_comparison/version1__subgroup_ferritin_comparison.pdf')" | R --slave
+# echo "rmarkdown::render('version1_bayes_ferritin_comparison.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/bmodels/version1/version1_bayes_ferritin_comparison.pdf')" | R --slave
 
 library(tidyverse)
 library(brms)
@@ -26,14 +26,14 @@ theme_set(theme_pubr())
 
 ```{r}
 # logistic (ID model)
-load("../data/OR_low_ferritin_model_subgroup_analysis.rdata")
-logistic <- OR_logistic_subgroup_pre
+load("../data/OR_low_ferritin_model_bayes.rdata")
+logistic <- OR_logistic_bayes
 
 # linear (ferritin model)
-load("../data/OR_ferritin_model_subgroup_analysis.rdata")
-linear <- OR_linear_subgroup_pre
+load("../data/OR_ferritin_model_bayes.rdata")
+linear <- OR_linear_bayes
 
-rm(OR_linear_subgroup_pre, OR_logistic_subgroup_pre)
+rm(OR_linear_bayes, OR_logistic_bayes)
 ```
 
 # Table for logistic model
@@ -57,9 +57,9 @@ logistic <- logistic %>%
 
 
 #theme_set(bayesplot::theme_default())
-pos <- position_nudge(y=as.numeric(as.factor(logistic$Cohort))/5 -0.1) 
+pos <- position_nudge(y=as.numeric(as.factor(logistic$Group))/5 -0.1) 
 
-p_log <- ggplot(logistic, aes(x = m, y = regressor, color = Cohort)) + 
+p_log <- ggplot(logistic, aes(x = m, y = regressor, color = Group)) + 
   geom_point(position = pos,
              size=4) +
   geom_linerange(aes(xmin = ll, xmax = hh), 
@@ -67,10 +67,10 @@ p_log <- ggplot(logistic, aes(x = m, y = regressor, color = Cohort)) +
                  size = 1, 
                  linetype = 1
                  ) +
-  scale_color_manual(values = c("#FF7B89", "#6F5F90", "#758EB7"),
-                     limits = c("FINDONOR",  "FINRISK97","HEALTH00")) +
-  scale_fill_manual(values = c("#FF7B89", "#6F5F90", "#758EB7"),
-                    limits = c("FINDONOR",  "FINRISK97","HEALTH00")) +
+  scale_color_manual(values = c("#0065BD", "#BA0303", "#C50084"),
+                     limits = c("Men",  "Post-menopausal women","Pre-menopausal women")) +
+  scale_fill_manual(values = c("#0065BD", "#BA0303", "#C50084"),
+                    limits = c("Men",  "Post-menopausal women","Pre-menopausal women")) +
   scale_shape_manual(values = c(1,16)) +
   scale_x_log10(limits=c(orlower,orupper))  + #how to get the lines that drop out of the visible?  
   geom_vline(xintercept = 1 , color = "grey", linetype = "dotted",
@@ -114,9 +114,9 @@ linear <- linear %>%
   )
 
 #theme_set(bayesplot::theme_default())
-pos <- position_nudge(y=as.numeric(as.factor(linear$Cohort))/5 -0.1) 
+pos <- position_nudge(y=as.numeric(as.factor(linear$Group))/5 -0.1) 
 
-p_lin <- ggplot(linear, aes(x = m, y = regressor, color = Cohort)) + 
+p_lin <- ggplot(linear, aes(x = m, y = regressor, color = Group)) + 
   geom_point(position = pos,
              size=4) +
   geom_linerange(aes(xmin = ll, xmax = hh), 
@@ -124,10 +124,10 @@ p_lin <- ggplot(linear, aes(x = m, y = regressor, color = Cohort)) +
                  size = 1, 
                  linetype = 1
                  ) +
-  scale_color_manual(values = c("#FF7B89", "#6F5F90", "#758EB7"),
-                     limits = c("FINDONOR",  "FINRISK97","HEALTH00")) +
-  scale_fill_manual(values = c("#FF7B89", "#6F5F90", "#758EB7"),
-                    limits = c("FINDONOR",  "FINRISK97","HEALTH00")) +
+  scale_color_manual(values = c("#0065BD", "#BA0303", "#C50084"),
+                     limits = c("Men",  "Post-menopausal women","Pre-menopausal women")) +
+  scale_fill_manual(values = c("#0065BD", "#BA0303", "#C50084"),
+                    limits = c("Men",  "Post-menopausal women","Pre-menopausal women")) +
   scale_shape_manual(values = c(1,16)) +
   xlim(orlower,orupper)  +   
   geom_vline(xintercept = 0 , color = "grey", linetype = "dotted",
@@ -187,9 +187,9 @@ linear_reverse <- linear %>%
   )
 
 #theme_set(bayesplot::theme_default())
-pos <- position_nudge(y=as.numeric(as.factor(linear_reverse$Cohort))/5 -0.1) 
+pos <- position_nudge(y=as.numeric(as.factor(linear_reverse$Group))/5 -0.1) 
 
-p_lin_reversed <- ggplot(linear_reverse, aes(x = m, y = regressor, color = Cohort)) + 
+p_lin_reversed <- ggplot(linear_reverse, aes(x = m, y = regressor, color = Group)) + 
   geom_point(position = pos,
              size=4) +
   geom_linerange(aes(xmin = ll, xmax = hh), 
@@ -197,10 +197,10 @@ p_lin_reversed <- ggplot(linear_reverse, aes(x = m, y = regressor, color = Cohor
                  size = 1, 
                  linetype = 1
                  ) +
-  scale_color_manual(values = c("#FF7B89", "#6F5F90", "#758EB7"),
-                     limits = c("FINDONOR",  "FINRISK97","HEALTH00")) +
-  scale_fill_manual(values = c("#FF7B89", "#6F5F90", "#758EB7"),
-                    limits = c("FINDONOR",  "FINRISK97","HEALTH00")) +
+  scale_color_manual(values = c("#0065BD", "#BA0303", "#C50084"),
+                     limits = c("Men",  "Post-menopausal women","Pre-menopausal women")) +
+  scale_fill_manual(values = c("#0065BD", "#BA0303", "#C50084"),
+                    limits = c("Men",  "Post-menopausal women","Pre-menopausal women")) +
   scale_shape_manual(values = c(1,16)) +
   xlim(orlower,orupper)  +   
   geom_vline(xintercept = 0 , color = "grey", linetype = "dotted",
@@ -249,7 +249,7 @@ figure_col_rev
 
 ```{r}
 # original
-ggplot2::ggsave(filename = "../results/figures/subgroup_analysis/model_comparison/version2_forest_comparison.pdf",
+ggplot2::ggsave(filename = "../results/figures/model_comparison/version1_bayes_forest_comparison.pdf",
                 plot = figure_col,
                 width = 65,
                 height = 25,
@@ -257,7 +257,7 @@ ggplot2::ggsave(filename = "../results/figures/subgroup_analysis/model_compariso
                 units = "cm")
 
 # ferritin model rotated  
-ggplot2::ggsave(filename = "../results/figures/subgroup_analysis/model_comparison/version2_forest_comparison_reversed.pdf",
+ggplot2::ggsave(filename = "../results/figures/model_comparison/version1_bayes_forest_comparison_reversed.pdf",
                 plot = figure_col_rev,
                 width = 65,
                 height = 25,
