@@ -13,7 +13,7 @@ Version 1: all variables added, also ones we only have for Finnish cohorts.
 
 ```{r setup, , message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-# echo "rmarkdown::render('low_ferritin_model_bayes.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/low_ferritin_model_bayes.pdf')" | R --slave
+# echo "rmarkdown::render('low_ferritin_model_bayes_version1.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/low_ferritin_model_bayes/low_ferritin_model_bayes_version1.pdf')" | R --slave
 library(tidyverse)
 library(brms)
 library(bayesplot)
