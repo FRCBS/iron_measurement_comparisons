@@ -9,11 +9,11 @@ output: pdf_document
 
 # Summary
 
-Version 1: all variables added, also ones we only have for Finnish cohorts.
+Version 2: includes only variables we have no NA:s for, in order to see if this fixes the issues in version 1.
 
 ```{r setup, , message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-# echo "rmarkdown::render('low_ferritin_model_bayes_version1.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/low_ferritin_model_bayes/low_ferritin_model_bayes_version1.pdf')" | R --slave
+# echo "rmarkdown::render('low_ferritin_model_bayes_version2.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/low_ferritin_model_bayes/low_ferritin_model_bayes_version2.pdf')" | R --slave
 library(tidyverse)
 library(brms)
 library(bayesplot)
@@ -81,7 +81,7 @@ regression_data_post <- all_cohorts %>%
 
 ```{r men}
 #men
-file <- "../results/bmodels/version1/logit_men_b"
+file <- "../results/bmodels/version2/logit_men_b"
 
 logistic_men_b <- brm(iron_deficiency ~ 
                         Age + 
@@ -94,7 +94,7 @@ logistic_men_b <- brm(iron_deficiency ~
                         log_CRP +
                         Region + 
                         Weight +
-                        RedMeat_n +
+                        #RedMeat_n +
                         Cohort, 
                       data = regression_data_men, 
                       family = bernoulli(),
@@ -109,7 +109,7 @@ summary(logistic_men_b)
 
 ```{r  pre}
 # premenopausal women
-file <- "../results/bmodels/version1/logit_pre_b"
+file <- "../results/bmodels/version2/logit_pre_b"
 
 logistic_pre_b <- brm(iron_deficiency ~ 
                         Age + 
@@ -122,7 +122,7 @@ logistic_pre_b <- brm(iron_deficiency ~
                         log_CRP +
                         Region + 
                         Weight +
-                        RedMeat_n +
+                        #RedMeat_n +
                         Cohort +
                         Menstruation +
                         PreviousChildbirth, 
@@ -140,7 +140,7 @@ summary(logistic_pre_b)
 
 ```{r  post}
 # postmenopausal women
-file <- "../results/bmodels/version1/logit_post_b"
+file <- "../results/bmodels/version2/logit_post_b"
 
 logistic_post_b <- brm(iron_deficiency ~
                        Age + 
@@ -153,7 +153,7 @@ logistic_post_b <- brm(iron_deficiency ~
                         log_CRP +
                         Region + 
                         Weight +
-                        RedMeat_n +
+                        #RedMeat_n +
                         Cohort +
                         #Menstruation +   # will not work as all observations are no_period
                         PreviousChildbirth, 
@@ -279,13 +279,12 @@ regressor_values <- c(
     "donation_count_2" = "Donations in last 2 years (quadratic)",
     "Menstruationregular_period" = "Regular periods",
     "Weight" = "Weight (10 kg)",
-    "RedMeat_n" = "Red meat",
     "PreviousChildbirth" = "Given birth in the past",
-    #"RegionHYKS" = "Region (Helsinki university hospital)",
-    #"RegionTYKS" = "Region (Turku university hospital)",
-    #"RegionTAYS" = "Region (Tampere university hospital)",
-    #"RegionOYS" = "Region (Oulu university hospital)",
-    #"RegionKYS" = "Region (Kuopio university hospital)",
+    "RegionHYKS" = "Region (Helsinki university hospital)",
+    "RegionTYKS" = "Region (Turku university hospital)",
+    "RegionTAYS" = "Region (Tampere university hospital)",
+    "RegionOYS" = "Region (Oulu university hospital)",
+    "RegionKYS" = "Region (Kuopio university hospital)",
     "donation_count" = "Donations in last 2 years",
     "CohortHEALTH00" = "Cohort (Health 2000)",
     "CohortFINRISK97" = "Cohort (FinRisk 1997)"
@@ -388,12 +387,12 @@ p
 
 ```
 
-All observations are not showing up (two of the regions, one of the cohorts). Both cohorts worked in the original code, what am I missing? Is the effect of the region large enough to account for the variability?
+Clearly the issue was the NA observations, as now that red meat consumption was removed the model works.  
 
 ```{r}
 
 
-ggplot2::ggsave(filename = "../results/figures/low_ferritin_model/version1_forest_all_cohorts_bayes.pdf",
+ggplot2::ggsave(filename = "../results/figures/low_ferritin_model/version2_forest_all_cohorts_bayes.pdf",
                 plot = p,
                 width = 35,
                 height = 25,
@@ -411,7 +410,7 @@ save(OR_logistic_bayes, file = "../data/OR_low_ferritin_model_bayes.rdata")
 
 ## Compare to bootstrapped
 
-This part was not done for version 1.
+This part was not done for version 2.
 
 ```{r  fig2, fig.height = 15, fig.width = 10 ,warning=FALSE}
 file <- "../results/bootstraps/plotdata_filtered.rdata"
