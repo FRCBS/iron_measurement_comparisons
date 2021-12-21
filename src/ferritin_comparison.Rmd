@@ -249,7 +249,7 @@ figure_col_rev
 
 ```{r}
 # original
-ggplot2::ggsave(filename = "../results/figures/model_comparison/version1_bayes_forest_comparison.pdf",
+ggplot2::ggsave(filename = "../results/figures/model_comparison/version2_bayes_forest_comparison.pdf",
                 plot = figure_col,
                 width = 65,
                 height = 25,
@@ -257,7 +257,7 @@ ggplot2::ggsave(filename = "../results/figures/model_comparison/version1_bayes_f
                 units = "cm")
 
 # ferritin model rotated  
-ggplot2::ggsave(filename = "../results/figures/model_comparison/version1_bayes_forest_comparison_reversed.pdf",
+ggplot2::ggsave(filename = "../results/figures/model_comparison/version2_bayes_forest_comparison_reversed.pdf",
                 plot = figure_col_rev,
                 width = 65,
                 height = 25,
