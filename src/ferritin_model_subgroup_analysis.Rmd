@@ -103,8 +103,6 @@ regression_data_h2000 <- all_cohorts %>%
 
 ## Models 
 
-Running the diagnostics in this code, we can see that chains do not mix properly in the general population cohorts due to the variables iron_complience and donation_count_2. The observations for these two cohorts were imputed due to missing data (donation interval between 3-6 years, 0 donations in the past two years and iron supplementation as no supplementation taken, see low_ferritin_data). For this reason, we removed these two varibles for the general population cohorts. 
-
 ### FinDonor
 
 ```{r blood}
