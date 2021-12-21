@@ -10,6 +10,8 @@ output: pdf_document
 
 This code allows the user to compare the linear model of ferritin to the logistic model for iron deficiency.
 
+Version 2
+
 ```{r}
 knitr::opts_chunk$set(echo = TRUE)
 # echo "rmarkdown::render('version1_bayes_ferritin_comparison.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/bmodels/version1/version1_bayes_ferritin_comparison.pdf')" | R --slave
