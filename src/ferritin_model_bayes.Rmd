@@ -406,6 +406,10 @@ ggplot2::ggsave(filename = "../results/figures/version1_forest_all_cohorts_bayes
                 dpi = 600,
                 units = "cm")
 
+# save ORs for comparison with other models 
+OR_linear_bayes <- plotdata
+save(OR_linear_bayes, file = "../data/OR_ferritin_model_bayes.rdata")
+
 
 ```
 

@@ -400,6 +400,10 @@ ggplot2::ggsave(filename = "../results/figures/low_ferritin_model/version1_fores
                 dpi = 600,
                 units = "cm")
 
+# save ORs for comparison with other models 
+OR_logistic_bayes <- plotdata
+save(OR_logistic_bayes, file = "../data/OR_low_ferritin_model_bayes.rdata")
+
 
 ```
 
