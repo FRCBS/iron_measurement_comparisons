@@ -14,7 +14,7 @@ Version 2
 
 ```{r}
 knitr::opts_chunk$set(echo = TRUE)
-# echo "rmarkdown::render('version2_bayes_ferritin_comparison.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/bmodels/version1/version2_bayes_ferritin_comparison.pdf')" | R --slave
+# echo "rmarkdown::render('version2_bayes_ferritin_comparison.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/bmodels/version1/version3_bayes_ferritin_comparison.pdf')" | R --slave
 
 library(tidyverse)
 library(brms)
@@ -251,7 +251,7 @@ figure_col_rev
 
 ```{r}
 # original
-ggplot2::ggsave(filename = "../results/figures/model_comparison/version2_bayes_forest_comparison.pdf",
+ggplot2::ggsave(filename = "../results/figures/model_comparison/version3_bayes_forest_comparison.pdf",
                 plot = figure_col,
                 width = 65,
                 height = 25,
@@ -259,7 +259,7 @@ ggplot2::ggsave(filename = "../results/figures/model_comparison/version2_bayes_f
                 units = "cm")
 
 # ferritin model rotated  
-ggplot2::ggsave(filename = "../results/figures/model_comparison/version2_bayes_forest_comparison_reversed.pdf",
+ggplot2::ggsave(filename = "../results/figures/model_comparison/version3_bayes_forest_comparison_reversed.pdf",
                 plot = figure_col_rev,
                 width = 65,
                 height = 25,
