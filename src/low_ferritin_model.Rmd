@@ -17,12 +17,11 @@ Version 1 (corresponds to version 3 of Bayes model)
 knitr::opts_chunk$set(echo = TRUE)
 # echo "rmarkdown::render('low_ferritin_model.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/low_ferritin_model.pdf')" | R --slave
 library(tidyverse)
-library(detectseparation)
+library(detectSeparation)
 library(tidymodels)
 library(ggplot2)
 library(car)
 library(boot)
-library(brms)
 ```
 
 PART 1: LOGISTIC REGRESSION
