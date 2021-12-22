@@ -9,7 +9,7 @@ output: pdf_document
 
 # Summary
 
-Version 2: includes only variables we have no NA:s for, in order to see if this fixes the issues in version 1.
+Version 3: removed region variable
 
 ```{r setup, , message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -81,7 +81,7 @@ regression_data_post <- all_cohorts %>%
 
 ```{r men}
 #men
-file <- "../results/bmodels/version2/logit_men_b"
+file <- "../results/bmodels/version3/logit_men_b"
 
 logistic_men_b <- brm(iron_deficiency ~ 
                         Age + 
@@ -92,7 +92,7 @@ logistic_men_b <- brm(iron_deficiency ~
                         donation_count +
                         log_last_donation + 
                         log_CRP +
-                        Region + 
+                        #Region + 
                         Weight +
                         #RedMeat_n +
                         Cohort, 
@@ -109,7 +109,7 @@ summary(logistic_men_b)
 
 ```{r  pre}
 # premenopausal women
-file <- "../results/bmodels/version2/logit_pre_b"
+file <- "../results/bmodels/version3/logit_pre_b"
 
 logistic_pre_b <- brm(iron_deficiency ~ 
                         Age + 
@@ -120,7 +120,7 @@ logistic_pre_b <- brm(iron_deficiency ~
                         donation_count +
                         log_last_donation + 
                         log_CRP +
-                        Region + 
+                        #Region + 
                         Weight +
                         #RedMeat_n +
                         Cohort +
@@ -140,7 +140,7 @@ summary(logistic_pre_b)
 
 ```{r  post}
 # postmenopausal women
-file <- "../results/bmodels/version2/logit_post_b"
+file <- "../results/bmodels/version3/logit_post_b"
 
 logistic_post_b <- brm(iron_deficiency ~
                        Age + 
@@ -151,7 +151,7 @@ logistic_post_b <- brm(iron_deficiency ~
                         donation_count +
                         log_last_donation + 
                         log_CRP +
-                        Region + 
+                        #Region + 
                         Weight +
                         #RedMeat_n +
                         Cohort +
@@ -280,11 +280,6 @@ regressor_values <- c(
     "Menstruationregular_period" = "Regular periods",
     "Weight" = "Weight (10 kg)",
     "PreviousChildbirth" = "Given birth in the past",
-    "RegionHYKS" = "Region (Helsinki university hospital)",
-    "RegionTYKS" = "Region (Turku university hospital)",
-    "RegionTAYS" = "Region (Tampere university hospital)",
-    "RegionOYS" = "Region (Oulu university hospital)",
-    "RegionKYS" = "Region (Kuopio university hospital)",
     "donation_count" = "Donations in last 2 years",
     "CohortHEALTH00" = "Cohort (Health 2000)",
     "CohortFINRISK97" = "Cohort (FinRisk 1997)"
@@ -387,12 +382,10 @@ p
 
 ```
 
-Clearly the issue was the NA observations, as now that red meat consumption was removed the model works.  
-
 ```{r}
 
 
-ggplot2::ggsave(filename = "../results/figures/low_ferritin_model/version2_forest_all_cohorts_bayes.pdf",
+ggplot2::ggsave(filename = "../results/figures/low_ferritin_model/version3_forest_all_cohorts_bayes.pdf",
                 plot = p,
                 width = 35,
                 height = 25,
@@ -410,7 +403,7 @@ save(OR_logistic_bayes, file = "../data/OR_low_ferritin_model_bayes.rdata")
 
 ## Compare to bootstrapped
 
-This part was not done for version 2.
+
 
 ```{r  fig2, fig.height = 15, fig.width = 10 ,warning=FALSE}
 file <- "../results/bootstraps/plotdata_filtered.rdata"
