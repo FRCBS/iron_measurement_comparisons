@@ -9,11 +9,11 @@ output: pdf_document
 
 # Summary
 
-Version 2: includes only variables we have no NA:s for, in order to see if this fixes the issues in version 1. 
+Version 3: removed region variable
 
 ```{r setup, , message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-# echo "rmarkdown::render('ferritin_model_bayes_version2.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/ferritin_model_bayes/ferritin_model_bayes_version2.pdf')" | R --slave
+# echo "rmarkdown::render('ferritin_model_bayes_version3.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/ferritin_model_bayes/ferritin_model_bayes_version3.pdf')" | R --slave
 library(tidyverse)
 library(brms)
 library(bayesplot)
@@ -86,7 +86,7 @@ regression_data_post <- all_cohorts %>%
 
 ```{r men}
 #men
-file <- "../results/bmodels/version2/linear_men_b"
+file <- "../results/bmodels/version3/linear_men_b"
 
 linear_men_b <- brm(log_ferritin ~ 
                         Age + 
@@ -97,7 +97,7 @@ linear_men_b <- brm(log_ferritin ~
                         donation_count +
                         log_last_donation + 
                         log_CRP +
-                        Region + 
+                        #Region + 
                         Weight +
                         #RedMeat_n +
                         Cohort, 
@@ -114,7 +114,7 @@ summary(linear_men_b)
 
 ```{r  pre}
 # premenopausal women
-file <- "../results/bmodels/version2/linear_pre_b"
+file <- "../results/bmodels/version3/linear_pre_b"
 
 linear_pre_b <- brm(log_ferritin ~ 
                       Age + 
@@ -125,7 +125,7 @@ linear_pre_b <- brm(log_ferritin ~
                         donation_count +
                         log_last_donation + 
                         log_CRP +
-                        Region + 
+                        #Region + 
                         Weight +
                         #RedMeat_n +
                         Cohort +
@@ -145,7 +145,7 @@ summary(linear_pre_b)
 
 ```{r  post}
 # postmenopausal women
-file <- "../results/bmodels/version2/linear_post_b"
+file <- "../results/bmodels/version3/linear_post_b"
 
 linear_post_b <- brm(log_ferritin ~ 
                         Age + 
@@ -156,7 +156,7 @@ linear_post_b <- brm(log_ferritin ~
                         donation_count +
                         log_last_donation + 
                         log_CRP +
-                        Region + 
+                        #Region + 
                         Weight +
                         #RedMeat_n +
                         Cohort +
@@ -288,13 +288,7 @@ regressor_values <- c(
     "donation_count_2" = "Donations in last 2 years (quadratic)",
     "Menstruationregular_period" = "Regular periods",
     "Weight" = "Weight (10 kg)",
-    "RedMeat_n" = "Red meat",
     "PreviousChildbirth" = "Given birth in the past",
-    "RegionHYKS" = "Region (Helsinki university hospital)",
-    "RegionTYKS" = "Region (Turku university hospital)",
-    "RegionTAYS" = "Region (Tampere university hospital)",
-    "RegionOYS" = "Region (Oulu university hospital)",
-    "RegionKYS" = "Region (Kuopio university hospital)",
     "donation_count" = "Donations in last 2 years",
     "CohortHEALTH00" = "Cohort (Health 2000)",
     "CohortFINRISK97" = "Cohort (FinRisk 1997)"
@@ -399,7 +393,7 @@ p
 ```{r}
 
 
-ggplot2::ggsave(filename = "../results/figures/version2_forest_all_cohorts_bayes_ferritin.pdf",
+ggplot2::ggsave(filename = "../results/figures/version3_forest_all_cohorts_bayes_ferritin.pdf",
                 plot = p,
                 width = 35,
                 height = 25,
