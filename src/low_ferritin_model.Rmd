@@ -507,6 +507,8 @@ ggsave("../results/figures/iron_deficiency_probabilities_post.pdf")
 # premenopausal women 
 #plot(logistic_pre,which = 5)
 ```
+
+
 ```{r}
 # postmenopausal women
 #plot(logistic_post,which = 5)
