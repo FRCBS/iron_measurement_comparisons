@@ -15,7 +15,7 @@ Version 1 (corresponds to version 3 of Bayes model)
 
 ```{r setup, , message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-# echo "rmarkdown::render('low_ferritin_model.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/low_ferritin_model.pdf')" | R --slave
+# echo "rmarkdown::render('low_ferritin_model_version1.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/low_ferritin_model_version1.pdf')" | R --slave
 library(tidyverse)
 library(detectseparation)
 library(tidymodels)
@@ -635,17 +635,17 @@ get_bootstrap_coeffs <- function(regression_data, current_group, #men, pre or po
       filter(Group == "Men") %>% 
       select(
       #By commenting out variables from this list you change what is included in the bootsrapped models
-      Age + 
-      BMI + 
-      Smoking + 
-      iron_complience + 
-      donation_count_2 + 
-      donation_count +
-      log_last_donation + 
-      log_CRP +
-      #Region + 
-      Weight +
-      #RedMeat_n +
+      Age, 
+      BMI,  
+      Smoking, 
+      iron_complience,  
+      donation_count_2,  
+      donation_count, 
+      log_last_donation,  
+      log_CRP, 
+      #Region,  
+      Weight, 
+      #RedMeat_n, 
       Cohort
     )
   }
@@ -655,19 +655,19 @@ get_bootstrap_coeffs <- function(regression_data, current_group, #men, pre or po
       filter(Group == "Pre_menopause_women") %>% 
       select(
       #By commenting out variables from this list you change what is included in the bootsrapped models
-      Age + 
-      BMI + 
-      Smoking + 
-      iron_complience + 
-      donation_count_2 + 
-      donation_count +
-      log_last_donation + 
-      log_CRP +
-      #Region + 
-      Weight +
-      #RedMeat_n +
-      Cohort +
-      Menstruation +
+      Age, 
+      BMI, 
+      Smoking, 
+      iron_complience,
+      donation_count_2, 
+      donation_count,
+      log_last_donation, 
+      log_CRP,
+      #Region, 
+      Weight,
+      #RedMeat_n,
+      Cohort,
+      Menstruation,
       PreviousChildbirth
     )  
   }
@@ -677,19 +677,19 @@ get_bootstrap_coeffs <- function(regression_data, current_group, #men, pre or po
       filter(Group == "Post_menopause_women") %>%
       select(
       #By commenting out variables from this list you change what is included in the bootsrapped models
-      Age + 
-      BMI + 
-      Smoking + 
-      iron_complience + 
-      donation_count_2 + 
-      donation_count +
-      log_last_donation + 
-      log_CRP +
-      #Region + 
-      Weight +
-      #RedMeat_n +
-      Cohort +
-      #Menstruation +   # will not work as all observations are no_period
+      Age,
+      BMI, 
+      Smoking, 
+      iron_complience, 
+      donation_count_2, 
+      donation_count,
+      log_last_donation, 
+      log_CRP,
+      #Region, 
+      Weight,
+      #RedMeat_n,
+      Cohort,
+      #Menstruation,   # will not work as all observations are no_period
       PreviousChildbirth
     )
   }
