@@ -2,7 +2,7 @@
 title: "Low ferritin data"
 author: "Sofie Ekroos"
 date: "19.7.2021"
-output: github_document
+output: pdf_document
 ---
 
 Based on Muriel Lobier's original code (https://github.com/FRCBS/iron_levels_of_blood_donors/blob/master/src/index.Rmd)
@@ -28,7 +28,7 @@ library(sfsmisc)
 library(MASS)
 library(ordinal)
 library(sjmisc)
-library(epiDisplay)
+#library(epiDisplay)
 library(safeBinaryRegression)
 library(epitools)
 library(ez)
@@ -877,7 +877,7 @@ As decided previously, we remove data according the following criteria:
 * Weight < 50kg (blood donor selection criteria) 
 
 This amounts to "cohort_name %>% filter(BMI >= 50 | Ferritin >= 400 | Weight < 50) %>% nrow()" participants that are removed. 
-  * FinDonor: `r blood_data_summary_final %>% filter(BMI >= 50 | Ferritin >= 400 | Weight < 50) %>% nrow()) %>% nrow()`
+  * FinDonor: `r blood_data_summary_final %>% filter(BMI >= 50 | Ferritin >= 400 | Weight < 50) %>% nrow()`
   * FinRisk97: `r fr1997_summary_final %>% filter(BMI >= 50 | Ferritin >= 400 | Weight < 50) %>% nrow()`
   * Health00: `r h2000_summary_final %>% filter(BMI >= 50 | Ferritin >= 400 | Weight < 50) %>% nrow()`
 
