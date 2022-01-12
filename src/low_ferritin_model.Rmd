@@ -100,7 +100,7 @@ all_cohorts %>%
   dplyr::select(Group, iron_deficiency) %>% 
   group_by(Group, iron_deficiency) %>% 
   count() %>% 
-  #group_by(Group) %>% 
+  group_by(Group) %>% 
   summarise(
     ID = iron_deficiency,
     n=n,
@@ -637,6 +637,7 @@ get_bootstrap_coeffs <- function(regression_data, current_group, #men, pre or po
       filter(Group == "Men") %>% 
       select(
       #By commenting out variables from this list you change what is included in the bootsrapped models
+      iron_deficiency,
       Age, 
       BMI,  
       Smoking, 
@@ -657,6 +658,7 @@ get_bootstrap_coeffs <- function(regression_data, current_group, #men, pre or po
       filter(Group == "Pre_menopause_women") %>% 
       select(
       #By commenting out variables from this list you change what is included in the bootsrapped models
+      iron_deficiency,
       Age, 
       BMI, 
       Smoking, 
@@ -679,6 +681,7 @@ get_bootstrap_coeffs <- function(regression_data, current_group, #men, pre or po
       filter(Group == "Post_menopause_women") %>%
       select(
       #By commenting out variables from this list you change what is included in the bootsrapped models
+      iron_deficiency,
       Age,
       BMI, 
       Smoking, 
