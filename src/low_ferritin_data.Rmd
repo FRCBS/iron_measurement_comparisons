@@ -1113,13 +1113,17 @@ summary_all_cohorts %>%
 
 ```{r}
 myVars <- c("Age" ,
-  "Ferritin (ug/l)" 
+  "Ferritin (ug/l)",
+  "Hb (g/l)",
+  "BMI"
 )
 non_normal_vars <- c("Ferritin (ug/l)")
 table1data <- summary_all_cohorts  %>%
   rename(
   "Age" = Age,
-  "Ferritin (ug/l)" = Ferritin
+  "Ferritin (ug/l)" = Ferritin,
+  "Hb (g/l)" = Hb,
+  "BMI" = BMI
 )
 
 summary_table <- CreateTableOne(data = 
