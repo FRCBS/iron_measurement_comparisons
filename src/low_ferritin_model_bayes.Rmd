@@ -406,7 +406,7 @@ save(OR_logistic_bayes, file = "../data/OR_low_ferritin_model_bayes.rdata")
 
 
 ```{r  fig2, fig.height = 15, fig.width = 10 ,warning=FALSE}
-file <- "../results/bootstraps/plotdata_filtered.rdata"
+file <- "../results/bootstraps/plotdata_filtered_version1.rdata" #Version 1 of the bootstrap model corresponds to version 3 of Bayes
 if(file.exists(file)) {
   load(file)
   temp <- plotdata_filtered %>% select(-p.value,-is_sig) %>% 
@@ -473,7 +473,7 @@ if(file.exists(file)) {
 ```{r}
 if(file.exists(file)) {
 
-ggplot2::ggsave(filename = "../results/figures/forest_all_cohorts_bayes_vs_boot.pdf",
+ggplot2::ggsave(filename = "../results/figures/forest_all_cohorts_bayes3_vs_boot1.pdf",
                 plot = p,
                 width = 35,
                 height = 30,

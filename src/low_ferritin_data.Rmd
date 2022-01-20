@@ -1148,7 +1148,7 @@ kable_styling(
   font_size = 8) %>% 
   column_spec(
     column = 2:7,
-    width = '1.5cm'
+    width = '2.5cm'
   )
   write.table(tab3Mat, 
               file = paste0("../results/low_ferritin_data/table_1.txt"),sep="\t")
