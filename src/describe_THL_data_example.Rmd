@@ -1,0 +1,373 @@
+---
+title: "EXAMPLE: Initial overview of data from THL Biobank for the IronMet project"
+author: "Mikko Arvas"
+date: "`r Sys.time()`"
+output:
+  pdf_document:
+    fig_caption: true
+    number_sections: true
+---
+
+\tableofcontents
+
+```{r setup, include=FALSE}
+#echo "rmarkdown::render('describe_THL_data_example.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/describe_THL_data_example.pdf')" | R --slave
+
+library(knitr)
+opts_chunk$set(#results = 'asis',      # Can also be set at the chunk-level. IT IS NEEDED IN THE dfsummary chunck
+               comment = NA,
+               prompt  = FALSE,
+               cache   = FALSE,
+               echo = TRUE,
+               message = FALSE,
+               warning = FALSE
+)
+library(summarytools)
+st_options(plain.ascii = FALSE,        # Always use this option in Rmd documents
+           style        = "rmarkdown", # Always use this option in Rmd documents
+           footnote     = NA,          # Makes html-rendered results more concise
+           subtitle.emphasis = FALSE)  # Improves layout with some rmardown themes
+library(tidyverse)
+library(lubridate)
+library(summarytools)
+library(data.table)
+library(UpSetR)
+```
+
+
+
+# Heath 2000 cohort
+
+```{r}
+h2000a<- as_tibble(fread(file = "../data/FENO/20210409/THLBB2020_19_H2000_baselinetiedot_NMR_09042021.txt",encoding="UTF-8",na.strings=c(",,","NA","NDEF","TAG")))
+h2000b<- as_tibble(fread(file = "../data/FENO/20210429/THLBB2020_19_H2000_baselinetiedot_29042021.txt",encoding="UTF-8",na.strings=c(",,","NA","NDEF","TAG")))
+```
+
+```{r}
+colnames(h2000a)
+```
+
+
+```{r}
+colnames(h2000b)
+```
+
+
+## How do the release IDs look
+```{r}
+h2000a %>% group_by(RELEASE_ID) %>% count() %>% group_by(n) %>% count()
+```
+```{r}
+h2000a %>% group_by(RELEASE_ID_UNIQ) %>% count() %>% group_by(n) %>% count()
+```
+```{r}
+h2000b %>% group_by(RELEASE_ID) %>% count() %>% group_by(n) %>% count()
+```
+```{r}
+h2000b %>% group_by(RELEASE_ID_UNIQ) %>% count() %>% group_by(n) %>% count()
+```
+
+
+```{r}
+h2000 <- full_join(h2000a,h2000b,by=c("RELEASE_ID"="RELEASE_ID","RELEASE_ID_UNIQ"="RELEASE_ID_UNIQ"))
+rm(h2000a)
+rm(h2000b)
+```
+
+```{r}
+
+```
+
+
+
+## Summary
+
+```{r , results = 'asis'}
+tmp <- h2000 %>% dplyr::select(-RELEASE_ID,-RELEASE_ID_UNIQ) 
+dfSummary(tmp,
+          plain.ascii = FALSE, 
+          style = "grid", 
+          graph.col = TRUE,
+          graph.magnif = 0.75, 
+          valid.col = FALSE, 
+          tmp.img.dir = "/tmp")
+```
+
+
+
+## Ferritin by sex
+
+```{r}
+p <- ggplot(h2000,aes(x=FERRITIINI,fill=as.factor(SP2))) + 
+  geom_histogram(position = "dodge") +
+  scale_x_log10()
+p
+```
+
+## Hb by sex
+
+```{r}
+p <- ggplot(h2000,aes(x=B_Hb,fill=as.factor(SP2))) + 
+  geom_histogram(position = "dodge") 
+p
+```
+
+
+# FINNRISK
+```{r}
+fr1997 <- as_tibble(fread(file = "../data/FENO/20210409/THLBB2020_19_FR97_baselinetiedot_NMR_08042021.txt",encoding="UTF-8",na.strings=c(",,","NA","NDEF","TAG")))
+fr1997 <- fr1997 %>% 
+  mutate(
+    CRP =
+    case_when(
+    CRP == "<0.1" ~ 0,
+    TRUE ~ as.numeric(CRP)
+  ) 
+)
+
+fr1997BM <- as_tibble(fread(file = "../data/FENO/20210429/THLBB2020_19_FR97_BiomarCare_29042021.txt",encoding="UTF-8",na.strings=c(",,","","NA","NDEF","TAG")))
+fr1997BM <- fr1997BM %>% 
+  mutate(
+    CRP =
+    case_when(
+    CRP == "<0.1>" ~ 0,
+    TRUE ~ as.numeric(CRP)
+  ) 
+)
+
+
+fr2002 <- as_tibble(fread(file = "../data/FENO/20210409/THLBB2020_19_FR02_baselinetiedot_NMR_08042021.txt",encoding="UTF-8",na.strings=c(",,","NA","NDEF","TAG")))
+fr2002 <- fr2002 %>% 
+  mutate(
+    CRP =
+    case_when(
+    CRP == "<0.1" ~ 0,
+    TRUE ~ as.numeric(CRP)
+  ) 
+)
+
+
+fr2012 <- as_tibble(fread(file = "../data/FENO/20210409/THLBB2020_19_FR12_baselinetiedot_NMR_08042021.txt",encoding="UTF-8",na.strings=c(",,","NA","NDEF","TAG")))
+fr2012 <- fr2012 %>% 
+  mutate(
+    CRP =
+    case_when(
+    CRP == "<0.1" ~ 0,
+    TRUE ~ as.numeric(CRP)
+  ) 
+)
+
+
+```
+
+
+```{r}
+colnames(fr1997)
+```
+
+```{r}
+fr1997BM <- fr1997BM %>% rename(CRPbm=CRP)
+colnames(fr1997BM)
+```
+
+```{r}
+colnames(fr2002)
+```
+
+```{r}
+colnames(fr2012)
+```
+
+
+```{r}
+listInput <- list(fr1997=colnames(fr1997),fr2002=colnames(fr2002),fr2012=colnames(fr2012))
+#upset(fromList(listInput), order.by = "freq")
+upset(fromList(listInput))
+
+```
+
+```{r}
+intersect(intersect(colnames(fr1997),colnames(fr2002)),colnames(fr2012))
+```
+
+
+## How do the release IDs look
+
+```{r}
+fr1997 %>% group_by(RELEASE_ID) %>% count() %>% group_by(n) %>% count()
+```
+```{r}
+fr1997 %>% group_by(RELEASE_ID_UNIQ) %>% count() %>% group_by(n) %>% count()
+```
+
+```{r}
+fr1997BM %>% group_by(RELEASE_ID) %>% count() %>% group_by(n) %>% count()
+```
+
+```{r}
+fr1997BM %>% group_by(RELEASE_ID_UNIQ) %>% count() %>% group_by(n) %>% count()
+```
+
+
+```{r}
+fr2002 %>% group_by(RELEASE_ID) %>% count() %>% group_by(n) %>% count()
+```
+
+```{r}
+fr2002 %>% group_by(RELEASE_ID_UNIQ) %>% count() %>% group_by(n) %>% count()
+```
+```{r}
+fr2012 %>% group_by(RELEASE_ID) %>% count() %>% group_by(n) %>% count()
+```
+
+```{r}
+fr2012 %>% group_by(RELEASE_ID_UNIQ) %>% count() %>% group_by(n) %>% count()
+```
+
+```{r}
+fr1997 <- full_join(fr1997,fr1997BM,by=c("RELEASE_ID"="RELEASE_ID","RELEASE_ID_UNIQ"="RELEASE_ID_UNIQ"))
+rm(fr1997BM)
+```
+
+```{r}
+listInput <- list(h2000=h2000$RELEASE_ID,fr1997=fr1997$RELEASE_ID,fr2002=fr2002$RELEASE_ID,fr2012=fr2012$RELEASE_ID)
+#upset(fromList(listInput), order.by = "freq")
+upset(fromList(listInput))
+
+```
+
+## Ferritin by sex
+
+```{r}
+p <- ggplot(fr1997,aes(x=FERRITIN,fill=as.factor(SUKUP))) + 
+  geom_histogram(position = "dodge") +
+  scale_x_log10()
+p
+```
+
+
+## Hb by sex
+
+```{r}
+p <- ggplot(fr1997,aes(x=HGB,fill=as.factor(SUKUP))) + 
+  geom_histogram(position = "dodge") 
+p
+```
+
+```{r}
+tmp <- fr1997  %>% filter(SUKUP == 2)
+
+fna_counts <- apply(tmp, 2, function(x){table(is.na(x))['TRUE'] })
+fna_counts <- na.omit(fna_counts)
+fna_counts[ fna_counts == nrow(tmp)]
+```
+
+Blood counts are made only for a small group of men.
+
+```{r}
+p <- ggplot(fr2002,aes(x=HGB,fill=as.factor(SUKUP))) + 
+  geom_histogram(position = "dodge") 
+p
+```
+
+```{r}
+p <- ggplot(fr2012,aes(x=HGB,fill=as.factor(SUKUP))) + 
+  geom_histogram(position = "dodge") 
+p
+```
+
+
+## Summary 1997
+
+
+
+```{r , results = 'asis'}
+tmp <- fr1997 %>% dplyr::select(-RELEASE_ID,-RELEASE_ID_UNIQ) 
+dfSummary(tmp,
+          plain.ascii = FALSE, 
+          style = "grid", 
+          graph.col = TRUE,
+          graph.magnif = 0.75, 
+          valid.col = FALSE, 
+          tmp.img.dir = "/tmp")
+```
+
+## Summary 2002
+
+```{r , results = 'asis'}
+tmp <- fr2002 %>% dplyr::select(-RELEASE_ID,-RELEASE_ID_UNIQ) 
+dfSummary(tmp,
+          plain.ascii = FALSE, 
+          style = "grid", 
+          graph.col = TRUE,
+          graph.magnif = 0.75, 
+          valid.col = FALSE, 
+          tmp.img.dir = "/tmp")
+```
+
+## Summary 2012
+
+```{r , results = 'asis'}
+tmp <- fr2012 %>% dplyr::select(-RELEASE_ID,-RELEASE_ID_UNIQ) 
+dfSummary(tmp,
+          plain.ascii = FALSE, 
+          style = "grid", 
+          graph.col = TRUE,
+          graph.magnif = 0.75, 
+          valid.col = FALSE, 
+          tmp.img.dir = "/tmp")
+```
+
+
+# GENERISK
+
+```{r}
+gr<- as_tibble(
+  fread(file = "../data/FENO/20210409/THLBB2020_19_GeneRISK_baselinetiedot_08042021.txt"
+        ,encoding="UTF-8",na.strings=c(",,","NA","NDEF","TAG")))
+```
+
+
+```{r}
+colnames(gr)
+```
+
+## How do the release IDs look
+
+```{r}
+gr %>% group_by(RELEASE_ID) %>% count() %>% group_by(n) %>% count()
+```
+```{r}
+gr %>% group_by(RELEASE_ID_UNIQ) %>% count() %>% group_by(n) %>% count()
+```
+
+
+
+
+## Summary
+
+```{r , results = 'asis'}
+tmp <- gr %>% dplyr::select(-RELEASE_ID,-RELEASE_ID_UNIQ) 
+dfSummary(tmp,
+          plain.ascii = FALSE, 
+          style = "grid", 
+          graph.col = TRUE,
+          graph.magnif = 0.75, 
+          valid.col = FALSE, 
+          tmp.img.dir = "/tmp")
+```
+
+
+
+
+# Overlaps
+
+```{r}
+listInput <- list(h2000=h2000$RELEASE_ID,fr1997=fr1997$RELEASE_ID,fr2002=fr2002$RELEASE_ID,fr2012=fr2012$RELEASE_ID,gr=gr$RELEASE_ID)
+upset(fromList(listInput))
+```
+```{r}
+thldata <- list(fr1997=fr1997,fr2002=fr2002,fr2012=fr2012,gr=gr,h2000=h2000)
+save(thldata,file="../results/thldata.rdata")
+```
+
