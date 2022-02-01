@@ -988,10 +988,20 @@ Due to difference in the CRP measurements (hs-CRP for the general population coh
 
 ```{r}
 # FinRisk97
+fr1997_summary_final <- fr1997_summary_final %>% 
+  mutate(CRPori = CRP) # Save original CRP for later use
 fr1997_summary_final$CRP[fr1997_summary_final$CRP < 3.0] <- 2.9
 
 # Health2000
+h2000_summary_final <- h2000_summary_final %>% 
+  mutate(CRPori = CRP) # Save original CRP for later use
+
 h2000_summary_final$CRP[h2000_summary_final$CRP < 3.0] <- 2.9
+
+#Blood donors
+blood_data_summary_final <- blood_data_summary_final %>% 
+  mutate(CRPori = CRP) 
+# Save original CRP for later use, this is needed as we will concatenate this later
 ```
 
 ### Previous childbirth
@@ -1067,7 +1077,7 @@ For the code to work all three cohorts need to be merged into one single table. 
 blood_data_summary_final <- blood_data_summary_final %>% 
   dplyr::select(ID, Group, Sex, Age, TwoYearsFromStartCount_FB, DaysToPreviousFB,
                 Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, IronComplienceNumeric, PreviousChildbirth,
-                CRP, Region, Weight, Cohort) %>% 
+                CRP, CRPori, Region, Weight, Cohort) %>% 
     mutate(Smoking = ifelse(Smoking == "daily", "yes", "no"),
          Smoking = factor(Smoking, levels = c( "no",  "yes")))
 
@@ -1075,7 +1085,7 @@ blood_data_summary_final <- blood_data_summary_final %>%
 fr1997_summary_final <- fr1997_summary_final %>% 
   dplyr::select(ID, Group, Sex, Age, TwoYearsFromStartCount_FB, DaysToPreviousFB,
                 Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, IronComplienceNumeric, PreviousChildbirth,
-                CRP, Region, Weight, Cohort) %>% 
+                CRP, CRPori, Region, Weight, Cohort) %>% 
        mutate(Smoking = ifelse(Smoking == "1", "yes", "no"),
        Smoking = factor(Smoking, levels = c( "no",  "yes")))
 
@@ -1083,7 +1093,7 @@ fr1997_summary_final <- fr1997_summary_final %>%
 h2000_summary_final <- h2000_summary_final %>% 
   dplyr::select(ID, Group, Sex, Age, TwoYearsFromStartCount_FB, DaysToPreviousFB,
                 Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, IronComplienceNumeric, PreviousChildbirth,
-                CRP, Region, Weight, Cohort) %>% 
+                CRP, CRPori,Region, Weight, Cohort) %>% 
          mutate(Smoking = ifelse(Smoking == "1", "yes", "no"),
          Smoking = factor(Smoking, levels = c( "no",  "yes")))
          
