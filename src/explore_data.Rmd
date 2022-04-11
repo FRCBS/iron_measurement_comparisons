@@ -1,0 +1,174 @@
+---
+title: "Other explorative analysis"
+author: "Mikko Arvas"
+date: "19.7.2021"
+output: pdf_document
+---
+
+
+# Summary
+
+Various explorations for the three Finnish Cohorts (FinDonor, FINRISK97, Health2000). 
+
+```{r setup, , message = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(cowplot)
+#library(GGally)
+library(ggfortify)
+#library(psych)
+#library(knitr)
+#library(lubridate)
+#library(ggbeeswarm)
+
+# echo "rmarkdown::render('explore_data.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/explore_data_FIN.pdf')" | R --slave
+
+```
+
+# Data loading and preparation
+
+```{r}
+#Get the non filtered data produced by low_ferritin_data.Rmd
+load("../results/summary_all_cohorts.rdata")
+```
+
+
+# CRP
+
+```{r}
+
+#Mark anemic
+
+summary_all_cohorts <- summary_all_cohorts %>% 
+  filter(!is.na(Hb)) %>% 
+  filter(!is.na(CRP)) %>%
+  filter(!is.na(Ferritin)) %>% 
+  mutate(
+    CRP=CRPori,
+    Region = as.factor(Region),
+    Sex=as.factor(Sex),
+    Menstruation=as.factor(Menstruation),
+  anemic = case_when(
+    Hb < 135 & Sex == 'Men' ~ TRUE,
+    Hb < 118 & Sex == 'Women' ~ TRUE,
+    TRUE ~ FALSE
+  ),
+  CRP = case_when(
+    CRP == 0 ~ 0.001,
+    TRUE ~ CRP
+  )
+)
+
+summary_all_cohorts %>% 
+  group_by(anemic,Sex) %>% 
+  summarise(
+    maxHb=max(Hb),
+    n = n()
+    )
+
+```
+
+## CRP in anemic men only
+
+```{r}
+temp <- summary_all_cohorts %>%  filter(!is.na(anemic)) %>% filter(Sex == 'Men') %>% filter(anemic == TRUE)
+
+p <- ggplot(temp)
+p <- p + geom_point(aes(x=CRP, y=Ferritin,col=Age))
+p <- p + scale_y_log10() + scale_x_log10() 
+p <- p + facet_wrap(~Cohort)
+p <- p + geom_hline(yintercept =15, col="red") + geom_hline(yintercept =30, col="red")
+p <- p + theme(axis.text.x=element_text(angle=90, hjust=1))
+p
+
+```
+
+## Ferritin vs CRP in all cohorts and groups 
+
+```{r}
+temp <- summary_all_cohorts %>%  filter(!is.na(anemic)) 
+temp2 <- summary_all_cohorts %>%  filter(!is.na(anemic)) %>% filter(anemic == TRUE)
+
+
+p <- ggplot(temp)
+p <- p + geom_point(aes(x=CRP, y=Ferritin, col=Age),alpha=0.5)
+p <- p + geom_point(aes(x=CRP, y=Ferritin),data=temp2,shape=1,col="green")
+p <- p + geom_smooth(aes(x=CRP, y=Ferritin),data=temp2,col="green",method = "lm")
+p <- p + scale_y_log10() + scale_x_log10() 
+p <- p + facet_grid(Group~Cohort)
+p <- p + geom_hline(yintercept =15, col="red",linetype=2) + geom_hline(yintercept =30, col="red",linetype=2)
+p <- p + geom_vline(xintercept =2.9, col="red",linetype=2)
+p <- p + geom_text(aes(x=0.01,y=15,label='15'))
+p <- p + geom_text(aes(x=0.03,y=30,label='30'))
+p <- p + geom_text(aes(x=2.9,y=1,label='2.9'))
+p <- p + theme(axis.text.x=element_text(angle=90, hjust=1))
+p <- p + geom_smooth(aes(x=CRP, y=Ferritin), col="black",alpha=0.5)
+p <- p + xlab("CRP mg/l") + ylab("Ferritiini ug/l")
+p
+
+
+```
+
+```{r}
+ggsave2(filename="../results/ferritin_vs_crp_with_anemia.pdf")
+ggsave2(filename="../results/ferritin_vs_crp_with_anemia.png")
+```
+
+# How do CRP==0 look?
+
+```{r}
+CRP_0_true <- summary_all_cohorts %>%
+  filter(Cohort =='HEALTH00') %>% 
+  mutate(
+    CRP_0 = case_when(
+      CRP == 0.001 ~ TRUE,
+      TRUE ~ FALSE
+    )
+  ) %>% filter(CRP_0==TRUE) %>% 
+  select(-CRP_0,
+         -ID,
+         -TwoYearsFromStartCount_FB,
+         -DaysToPreviousFB,
+         -IronComplienceNumeric,
+         -Cohort,
+         -RedMeat_n,
+         -CRPori
+         )
+
+CRP_0_false <- summary_all_cohorts %>%
+  filter(Cohort =='HEALTH00') %>% 
+  mutate(
+    CRP_0 = case_when(
+      CRP == 0.001 ~ TRUE,
+      TRUE ~ FALSE
+    )
+  ) %>% filter(CRP_0==FALSE) %>% 
+  select(-CRP_0,
+         -ID,
+         -TwoYearsFromStartCount_FB,
+         -DaysToPreviousFB,
+         -IronComplienceNumeric,
+         -Cohort,
+         -RedMeat_n,
+         -CRPori
+         )
+  
+
+summary(CRP_0_true %>% filter(Sex=="Men"))
+
+```
+
+```{r}
+summary(CRP_0_false %>% filter(Sex=="Men"))
+```
+
+No obvious differences. Although as expected BMI slightly smaller in the CRP_0 group.
+
+```{r}
+summary(CRP_0_true %>% filter(Sex=="Women"))
+```
+
+```{r}
+summary(CRP_0_false %>% filter(Sex=="Women"))
+```
+No obvious differences. Although as expected BMI slightly smaller in the CRP_0 group, and ferritin and age too. Anyhow the CRP=0 data appears real.
