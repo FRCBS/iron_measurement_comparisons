@@ -1,0 +1,329 @@
+---
+title: "Low ferritin model data check up"
+author: "Mikko Arvas"
+date: "04.04.2021"
+output: pdf_document
+
+---
+
+
+# Summary
+
+
+```{r setup, , message = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# echo "rmarkdown::render('low_ferritin_model_data_check.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/low_ferritin_model_data_check_FIN.pdf')" | R --slave
+library(tidyverse)
+library(binom)
+```
+
+
+# Data loading and preparation 
+
+Load data
+
+```{r}
+load("../data/ID_data_regression_cohorts.rdata")
+all_cohorts <- regression_cohorts
+
+all_cohorts <- all_cohorts %>% 
+  filter(!is.na(CRP)) %>% 
+  filter(! CRP >= 30)
+```
+
+# All cohorts together 
+
+## Data
+```{r}
+# men
+## menstruation and childbirth variables removed 
+regression_data_men <- all_cohorts %>% 
+  filter(Group == "Men") %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, Cohort, iron_deficiency, Smoking, iron_complience, Group, Region, Weight, RedMeat_n) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2) 
+
+# premenopausal women
+regression_data_pre <- all_cohorts %>% 
+  filter(Group == "Pre_menopause_women") %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, Cohort, iron_deficiency, Smoking, iron_complience, Group, Region, Weight, RedMeat_n, Menstruation, PreviousChildbirth) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2) 
+
+# postmenopausal womem 
+## menstruation variable removed 
+regression_data_post <- all_cohorts %>% 
+  filter(Group == "Post_menopause_women") %>% 
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, Cohort, iron_deficiency, Smoking, iron_complience, Group, Region, Weight, RedMeat_n, Menstruation, PreviousChildbirth) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         log_CRP = scale(log_CRP, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         BMI = scale(BMI, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2) 
+
+
+```
+
+# Summaries 
+
+
+```{r men}
+regression_data_men <- regression_data_men %>% select(
+iron_deficiency,
+Age, 
+BMI, 
+Smoking, 
+iron_complience,
+donation_count_2, 
+donation_count,
+log_last_donation, 
+log_CRP,
+#Region,
+Weight,
+#RedMeat_n,
+  Cohort
+) %>% mutate(
+  Cohort = as.factor(Cohort)
+  )
+  
+summary(regression_data_men)
+
+```
+
+THERE SHOULD BE NAs AT THIS POINT!!!
+
+
+```{r pre}
+regression_data_pre <- regression_data_pre %>% select(
+iron_deficiency,
+Age, 
+BMI, 
+Smoking, 
+iron_complience,
+donation_count_2, 
+donation_count,
+log_last_donation, 
+log_CRP,
+#Region,
+Weight,
+#RedMeat_n,
+Cohort,
+Menstruation,
+PreviousChildbirth
+) %>% mutate(
+  Cohort = as.factor(Cohort),
+  Menstruation = as.factor(Menstruation)
+) 
+
+summary(regression_data_pre)
+
+```
+
+```{r post}
+regression_data_post <- regression_data_post %>% select(
+iron_deficiency,
+Age, 
+BMI, 
+Smoking, 
+iron_complience,
+donation_count_2, 
+donation_count,
+log_last_donation, 
+log_CRP,
+#Region,
+Weight,
+#RedMeat_n,
+Cohort,
+#Menstruation,
+PreviousChildbirth
+)  %>% mutate(
+  Cohort = as.factor(Cohort)
+ # Menstruation = as.factor(Menstruation)
+)
+
+summary(regression_data_post)
+
+```
+# Continous variables
+
+```{r}
+
+plot_cont <- function(y){
+  tmp <- regression_data_men %>% 
+  select(iron_deficiency,one_of(y),Cohort) %>% 
+  mutate(Group = "men") %>% 
+  bind_rows(
+    regression_data_pre %>% 
+  select(iron_deficiency,one_of(y),Cohort) %>% 
+  mutate(Group = "pre")
+  ) %>% bind_rows(
+    regression_data_post %>% 
+  select(iron_deficiency,one_of(y),Cohort) %>% 
+  mutate(Group = "post")
+  ) 
+  #tmp
+  
+  tmp0 <- tmp %>% 
+    group_by(iron_deficiency,Cohort,Group) %>% 
+    summarise(
+      mean = mean(get(y)),
+      sd = sd(get(y)),
+      n = n(),
+      error = qt(0.975,df=n-1)*sd/sqrt(n),
+      .groups = "keep"
+    )
+  
+  #tmp0
+  
+  p <- ggplot(tmp,aes(x=iron_deficiency,y=get(y)))
+  p <- p + geom_jitter(alpha=0.5)
+  p <- p + geom_violin(fill=NA,color="red")
+  p <- p + ylab(y)
+  p <- p + geom_point(data=tmp0,aes(x=iron_deficiency,y=mean),col="red")
+  p <- p + geom_errorbar(data=tmp0,aes(x=iron_deficiency,y=mean,ymax = mean + error, ymin=mean - error),col="red")
+  p <- p + facet_grid(Group ~ Cohort,scales="free_y")
+  p
+  
+}
+
+```
+
+## Age
+
+```{r}
+plot_cont(y="Age")
+```
+
+## donation_count_2 
+
+```{r}
+plot_cont(y="donation_count_2")
+```
+
+## donation_count
+
+```{r}
+plot_cont(y="donation_count")
+```
+## log_last_donation
+
+```{r}
+plot_cont(y="log_last_donation")
+```
+
+# Factorial variables by cohort
+
+
+```{r}
+binom.confint.wrap <- function(success,n,bound) {
+  binom.confint(success  ,n, method=c("ac"),type="central")[,bound]
+}
+```
+
+
+```{r}
+
+table_cont_coh <- function(y){
+  tmp <- regression_data_men %>% 
+  select(iron_deficiency,one_of(y),Cohort) %>% 
+  mutate(Group = "men") %>% 
+  bind_rows(
+    regression_data_pre %>% 
+  select(iron_deficiency,one_of(y),Cohort) %>% 
+  mutate(Group = "pre")
+  ) %>% bind_rows(
+    regression_data_post %>% 
+  select(iron_deficiency,one_of(y),Cohort) %>% 
+  mutate(Group = "post")
+  )
+
+   
+  tmp <- tmp %>%
+    group_by(iron_deficiency,get(y),Cohort,Group) %>%
+    rename(y = "get(y)") %>% 
+    summarise(
+      cnt=n(),
+      .groups = "keep"
+    ) %>%
+    group_by(Cohort,Group) %>% 
+    mutate(
+      freq = cnt / sum(cnt),
+      lb = binom.confint.wrap(cnt,sum(cnt),bound="lower"),
+      ub = binom.confint.wrap(cnt,sum(cnt),bound="upper"),
+    )
+  
+  p <- ggplot(tmp,aes(y=freq,x=y,fill=Group,color=Group))
+  p <- p + geom_col(position="dodge",alpha = 0.3)
+  p <- p + geom_text(aes(label=cnt),position=position_dodge(.7),vjust = 1.5)
+  p <- p + geom_errorbar(aes(ymax=ub,ymin=lb,color=Group),position="dodge")
+  p <- p + facet_grid(iron_deficiency ~ Cohort,scales="free_y")
+  
+  p <- p + ylab("Proportion") + xlab(y)
+  p
+  #tmp
+}
+
+```
+
+## Smoking
+
+```{r}
+table_cont_coh(y="Smoking")
+```
+
+> 2173 / (2173 + 958 + 98 +22)
+[1] 0.6684097
+> 
+
+# Just the cohort 
+
+```{r}
+
+  tmp <- regression_data_men %>% 
+  select(iron_deficiency,Cohort) %>% 
+  mutate(Group = "men") %>% 
+  bind_rows(
+    regression_data_pre %>% 
+  select(iron_deficiency,Cohort) %>% 
+  mutate(Group = "pre")
+  ) %>% bind_rows(
+    regression_data_post %>% 
+  select(iron_deficiency,Cohort) %>% 
+  mutate(Group = "post")
+  )
+
+   
+  tmp <- tmp %>%
+    group_by(iron_deficiency,Cohort,Group) %>%
+    summarise(
+      cnt=n(),
+      .groups = "keep"
+    ) %>%
+    group_by(Cohort,Group) %>% 
+    mutate(
+      freq = cnt / sum(cnt),
+      lb = binom.confint.wrap(cnt,sum(cnt),bound="lower"),
+      ub = binom.confint.wrap(cnt,sum(cnt),bound="upper"),
+    )
+  
+  p <- ggplot(tmp,aes(y=freq,x=Cohort,fill=Group,color=Group))
+  p <- p + geom_col(position="dodge",alpha = 0.3)
+  p <- p + geom_text(aes(label=cnt),position=position_dodge(.7),vjust = 1.5)
+  p <- p + geom_errorbar(aes(ymax=ub,ymin=lb,color=Group),position="dodge")
+  p <- p + facet_grid(iron_deficiency ~ Group ,scales="free_y")
+  p <- p + theme(axis.text.x = element_text(angle = 90))
+  p <- p + ylab("Proportion")
+  p
+
+
+
+```
