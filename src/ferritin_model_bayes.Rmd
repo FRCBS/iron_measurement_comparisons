@@ -9,12 +9,12 @@ output: pdf_document
 
 # Summary
 
-Version 4: exchanged BMI and weight for blood volume
+Version 5: rerun after data pathways fixed. Includes all the variables available for finnish cohorts.
 
 ```{r setup, , message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 # echo "rmarkdown::render('ferritin_model_bayes_version3.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/ferritin_model_bayes/ferritin_model_bayes_version3.pdf')" | R --slave
-library(tidyverse)
+#library(tidyverse)
 library(brms)
 library(bayesplot)
 ```
@@ -28,7 +28,7 @@ PART 2: BAYESIAN LINEAR REGRESSION
 Load data
 
 ```{r}
-load("../data/ID_data_regression_cohorts.rdata")
+load("~/proj/iron_measurement_comparisons/data/ID_data_regression_cohorts.rdata")
 all_cohorts <- regression_cohorts
 
 all_cohorts <- all_cohorts %>% 
@@ -89,7 +89,7 @@ regression_data_post <- all_cohorts %>%
 
 ```{r men}
 #men
-file <- "../results/bmodels/version4/linear_men_b"
+file <- "../results/bmodels/version5/linear_men_b"
 
 linear_men_b <- brm(log_ferritin ~ 
                         Age + 
@@ -119,7 +119,7 @@ Estimate directions similar to when BMI andd weight were included in the model, 
 
 ```{r  pre}
 # premenopausal women
-file <- "../results/bmodels/version4/linear_pre_b"
+file <- "../results/bmodels/version5/linear_pre_b"
 
 linear_pre_b <- brm(log_ferritin ~ 
                       Age + 
@@ -152,7 +152,7 @@ Changing out weight/BMI for blood volume only caused minor changes compared to v
 
 ```{r  post}
 # postmenopausal women
-file <- "../results/bmodels/version4/linear_post_b"
+file <- "../results/bmodels/version5/linear_post_b"
 
 linear_post_b <- brm(log_ferritin ~ 
                         Age + 
@@ -407,14 +407,14 @@ The other variables in the forest plot look similar to the forest plot in versio
 
 ```{r}
 
-ggplot2::ggsave(filename = "../results/figures/ferritin_model/bayes_version4/forest_all_cohorts_bayes_ferritin.pdf",
+ggplot2::ggsave(filename = "../results/figures/ferritin_model/bayes_version5/forest_all_cohorts_bayes_ferritin.pdf",
                 plot = p,
                 width = 35,
                 height = 25,
                 dpi = 600,
                 units = "cm")
 
-ggplot2::ggsave(filename = "../results/figures/ferritin_model/bayes_version4/forest_all_cohorts_bayes_ferritin.png",
+ggplot2::ggsave(filename = "../results/figures/ferritin_model/bayes_version5/forest_all_cohorts_bayes_ferritin.png",
                 plot = p,
                 width = 35,
                 height = 25,
@@ -450,17 +450,17 @@ p_pub
 
 ```{r}
 
-ggplot2::ggsave(filename = "../results/figures/ferritin_model/bayes_version4/pub_forest_all_cohorts_bayes_ferritin.pdf",
+ggplot2::ggsave(filename = "../results/figures/ferritin_model/bayes_version5/pub_forest_all_cohorts_bayes_ferritin.pdf",
                 plot = p_pub,
-                width = 23,
-                height = 10,
+                width = 30,
+                height = 20,
                 dpi = 600,
                 units = "cm")
 
-ggplot2::ggsave(filename = "../results/figures/ferritin_model/bayes_version4/pub_forest_all_cohorts_bayes_ferritin.png",
+ggplot2::ggsave(filename = "../results/figures/ferritin_model/bayes_version5/pub_forest_all_cohorts_bayes_ferritin.png",
                 plot = p_pub,
-                width = 23,
-                height = 10,
+                width = 30,
+                height = 20,
                 dpi = 600,
                 units = "cm")
 ```
