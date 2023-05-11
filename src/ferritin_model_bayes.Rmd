@@ -9,7 +9,7 @@ output: pdf_document
 
 # Summary
 
-Version 3: removed region variable
+Version 4: exchanged BMI and weight for blood volume
 
 ```{r setup, , message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -46,35 +46,38 @@ all_cohorts <- all_cohorts %>%
 ## menstruation and childbirth variables removed 
 regression_data_men <- all_cohorts %>% 
   filter(Group == "Men") %>% 
-  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, Cohort, iron_deficiency, Smoking, iron_complience, Group, Region, Weight, RedMeat_n) %>%
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, Cohort, iron_deficiency, Smoking, iron_complience, Group, Region, Weight, RedMeat_n, blood_vol) %>%
   mutate(Age = scale(Age, scale = FALSE)[,1],
          log_CRP = scale(log_CRP, scale = FALSE)[,1],
          donation_count = scale(donation_count, scale = FALSE)[,1],
          log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
          BMI = scale(BMI, scale = FALSE)[,1],
+         blood_vol = scale(blood_vol, scale = FALSE)[,1],
          donation_count_2 = donation_count^2) 
 
 # premenopausal women
 regression_data_pre <- all_cohorts %>% 
   filter(Group == "Pre_menopause_women") %>% 
-  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, Cohort, iron_deficiency, Smoking, iron_complience, Group, Region, Weight, RedMeat_n, Menstruation, PreviousChildbirth) %>%
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, Cohort, iron_deficiency, Smoking, iron_complience, Group, Region, Weight, RedMeat_n, Menstruation, PreviousChildbirth, blood_vol) %>%
   mutate(Age = scale(Age, scale = FALSE)[,1],
          log_CRP = scale(log_CRP, scale = FALSE)[,1],
          donation_count = scale(donation_count, scale = FALSE)[,1],
          log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
          BMI = scale(BMI, scale = FALSE)[,1],
+         blood_vol = scale(blood_vol, scale = FALSE)[,1],
          donation_count_2 = donation_count^2) 
 
 # postmenopausal womem 
 ## menstruation variable removed 
 regression_data_post <- all_cohorts %>% 
   filter(Group == "Post_menopause_women") %>% 
-  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, Cohort, iron_deficiency, Smoking, iron_complience, Group, Region, Weight, RedMeat_n, Menstruation, PreviousChildbirth) %>%
+  dplyr::select(ID, log_ferritin, Age, log_CRP, BMI, donation_count, log_last_donation, Cohort, iron_deficiency, Smoking, iron_complience, Group, Region, Weight, RedMeat_n, Menstruation, PreviousChildbirth, blood_vol) %>%
   mutate(Age = scale(Age, scale = FALSE)[,1],
          log_CRP = scale(log_CRP, scale = FALSE)[,1],
          donation_count = scale(donation_count, scale = FALSE)[,1],
          log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
          BMI = scale(BMI, scale = FALSE)[,1],
+         blood_vol = scale(blood_vol, scale = FALSE)[,1],
          donation_count_2 = donation_count^2) 
 
 
@@ -86,11 +89,11 @@ regression_data_post <- all_cohorts %>%
 
 ```{r men}
 #men
-file <- "../results/bmodels/version3/linear_men_b"
+file <- "../results/bmodels/version4/linear_men_b"
 
 linear_men_b <- brm(log_ferritin ~ 
                         Age + 
-                        BMI + 
+                        #BMI + 
                         Smoking + 
                         iron_complience + 
                         donation_count_2 + 
@@ -98,8 +101,9 @@ linear_men_b <- brm(log_ferritin ~
                         log_last_donation + 
                         log_CRP +
                         #Region + 
-                        Weight +
+                        #Weight +
                         #RedMeat_n +
+                        blood_vol +
                         Cohort, 
                       data = regression_data_men, 
                       #family = bernoulli(),
@@ -111,14 +115,15 @@ linear_men_b <- brm(log_ferritin ~
 summary(linear_men_b)
 
 ```
+Estimate directions similar to when BMI andd weight were included in the model, slight change in age, larger change in the cohort variable estimate. Sigma estimate is the exact same compared to version 3.
 
 ```{r  pre}
 # premenopausal women
-file <- "../results/bmodels/version3/linear_pre_b"
+file <- "../results/bmodels/version4/linear_pre_b"
 
 linear_pre_b <- brm(log_ferritin ~ 
                       Age + 
-                        BMI + 
+                        #BMI + 
                         Smoking + 
                         iron_complience + 
                         donation_count_2 + 
@@ -126,10 +131,11 @@ linear_pre_b <- brm(log_ferritin ~
                         log_last_donation + 
                         log_CRP +
                         #Region + 
-                        Weight +
+                        #Weight +
                         #RedMeat_n +
                         Cohort +
                         Menstruation +
+                        blood_vol +
                         PreviousChildbirth, 
                       data = regression_data_pre,
                       #family = bernoulli(),
@@ -142,14 +148,15 @@ summary(linear_pre_b)
 
 
 ```
+Changing out weight/BMI for blood volume only caused minor changes compared to version 3. Sigma estimate is also the same.
 
 ```{r  post}
 # postmenopausal women
-file <- "../results/bmodels/version3/linear_post_b"
+file <- "../results/bmodels/version4/linear_post_b"
 
 linear_post_b <- brm(log_ferritin ~ 
                         Age + 
-                        BMI + 
+                        #BMI + 
                         Smoking + 
                         iron_complience + 
                         donation_count_2 + 
@@ -157,10 +164,11 @@ linear_post_b <- brm(log_ferritin ~
                         log_last_donation + 
                         log_CRP +
                         #Region + 
-                        Weight +
+                        #Weight +
                         #RedMeat_n +
                         Cohort +
                         #Menstruation +   # will not work as all observations are no_period
+                        blood_vol +
                         PreviousChildbirth, 
                      data = regression_data_post, 
                      #family = bernoulli(),
@@ -171,6 +179,7 @@ linear_post_b <- brm(log_ferritin ~
 
 summary(linear_post_b)
 ```
+Similar to males the changes from version 3 caused a somewhat larger change in the cohort variable and also CRP, and minor ones in the other variables. The effect direction remains the same to version 3 and the sigma estimate is the exact same. 
 
 ## Diagnostics
 
@@ -286,12 +295,13 @@ regressor_values <- c(
    "Smokingyes" ="Smoker",
     "iron_complience" = "Iron supplementation",
     "donation_count_2" = "Donations in last 2 years (quadratic)",
-    "Menstruationregular_period" = "Regular periods",
+    "Menstruationregular_period" = "Regular menstrual cycle",
     "Weight" = "Weight (10 kg)",
     "PreviousChildbirth" = "Given birth in the past",
     "donation_count" = "Donations in last 2 years",
     "CohortHEALTH00" = "Cohort (Health 2000)",
-    "CohortFINRISK97" = "Cohort (FinRisk 1997)"
+    "CohortFINRISK97" = "Cohort (FinRisk 1997)",
+    "blood_vol" = "Blood volume (L, Nadler's equation)"
 )
 ```
 
@@ -326,7 +336,7 @@ intervals_post <- mcmc_intervals_data(
   ) %>% mutate(Group='Post-menopausal women')
 
 intervals_combined <- rbind(intervals_pre,intervals_post,intervals_men) %>% 
-  filter(! (parameter == 'b_Intercept' | parameter == 'lp__' | parameter == 'sigma')) %>% 
+  filter(! (parameter == 'b_Intercept' | parameter == 'lp__' | parameter == 'sigma'| parameter == 'lprior')) %>% 
   mutate(parameter = gsub("b_","",parameter)) %>% 
   mutate(regressor = plyr::revalue(parameter, regressor_values)) %>% 
   select(-parameter)
@@ -352,13 +362,14 @@ plotdata <- intervals_combined %>%
       hh > orupper ~ orupper,
       TRUE ~ hh
     )
-  )
+  ) %>% mutate(is.sig = ll < 0 & hh < 0 | ll > 0 & hh > 0)
 
 #theme_set(bayesplot::theme_default())
 pos <- position_nudge(y=as.numeric(as.factor(plotdata$Group))/5 -0.1) 
 
 p <- ggplot(plotdata, aes(x = m, y = regressor, color = Group)) + 
   geom_point(position = pos,
+             aes(shape = is.sig), 
              size=4) +
   geom_linerange(aes(xmin = ll, xmax = hh), 
                  position = pos,
@@ -383,17 +394,27 @@ p <- ggplot(plotdata, aes(x = m, y = regressor, color = Group)) +
   ) +
   guides(shape = "none") +
   theme_classic() +
-  ylab("Coefficient") 
+  xlab("Coefficient") +
+  theme(text = element_text(size = 20)) +
+  theme(axis.title.y = element_blank())
 
 p
 
 
 ```
 
+The other variables in the forest plot look similar to the forest plot in version 3 after the addition of blood volume and removal of BMI and weight. Models look stable. 
+
 ```{r}
 
+ggplot2::ggsave(filename = "../results/figures/ferritin_model/bayes_version4/forest_all_cohorts_bayes_ferritin.pdf",
+                plot = p,
+                width = 35,
+                height = 25,
+                dpi = 600,
+                units = "cm")
 
-ggplot2::ggsave(filename = "../results/figures/version3_forest_all_cohorts_bayes_ferritin.pdf",
+ggplot2::ggsave(filename = "../results/figures/ferritin_model/bayes_version4/forest_all_cohorts_bayes_ferritin.png",
                 plot = p,
                 width = 35,
                 height = 25,
@@ -407,10 +428,42 @@ save(OR_linear_bayes, file = "../data/OR_ferritin_model_bayes.rdata")
 
 ```
 
-Clearly the issue was the NA observations, as now that red meat consumption was removed the model works.  
 
 
+```{r , fig2, fig.height = 5, fig.width = 10 ,warning=FALSE}
+# smaller picture for publication/presentation
 
+p_pub <- p + theme(axis.title = element_text(size = 14),
+      strip.text =  element_text(size = 14),
+      legend.text = element_text(size = 12),
+      strip.background = element_rect(fill = "white"),
+      strip.background.x = element_blank(),
+      axis.text.y = element_text(size = 14),
+      axis.text.x = element_text(size = 14, angle = 30,hjust = 0.8),
+      plot.title =  element_text(size = 16),
+      plot.subtitle = element_text(size = 16,
+                                   hjust = 0.5))
+
+p_pub
+```
+
+
+```{r}
+
+ggplot2::ggsave(filename = "../results/figures/ferritin_model/bayes_version4/pub_forest_all_cohorts_bayes_ferritin.pdf",
+                plot = p_pub,
+                width = 23,
+                height = 10,
+                dpi = 600,
+                units = "cm")
+
+ggplot2::ggsave(filename = "../results/figures/ferritin_model/bayes_version4/pub_forest_all_cohorts_bayes_ferritin.png",
+                plot = p_pub,
+                width = 23,
+                height = 10,
+                dpi = 600,
+                units = "cm")
+```
 
 
 
@@ -427,7 +480,7 @@ It would be good to experiment with weight and days_to_last_donation.
 
 This has not been updated for a linear model! 
 
-```{r  fig2, fig.height = 15, fig.width = 10 ,warning=FALSE}
+```{r  fig3, fig.height = 15, fig.width = 10 ,warning=FALSE}
 file <- "../results/bootstraps/plotdata_filtered_ferritin.rdata"
 if(file.exists(file)) {
   load(file)
