@@ -3,7 +3,6 @@ title: "Ferritin model"
 author: "Mikko Arvas"
 date: "18.11.2021"
 output: pdf_document
-
 ---
 
 
@@ -13,10 +12,12 @@ Version 5: rerun after data pathways fixed. Includes all the variables available
 
 ```{r setup, , message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-# echo "rmarkdown::render('ferritin_model_bayes_version3.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/ferritin_model_bayes/ferritin_model_bayes_version3.pdf')" | R --slave
 #library(tidyverse)
 library(brms)
 library(bayesplot)
+library(dplyr)
+library(ggplot2)
+# echo "rmarkdown::render('ferritin_model_bayes_version3.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/ferritin_model_bayes/ferritin_model_bayes_version3.pdf')" | R --slave
 ```
 
 
@@ -34,6 +35,7 @@ all_cohorts <- regression_cohorts
 all_cohorts <- all_cohorts %>% 
   filter(!is.na(CRP)) %>% 
   filter(! CRP >= 30)
+
 ```
 
 
