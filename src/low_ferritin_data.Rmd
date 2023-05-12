@@ -13,7 +13,7 @@ This document includes all codes necessary to run the analysis of and produce th
 
 ```{r setup, , message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-#library(tidyverse) 
+library(tidyverse) 
 library(tableone) 
 library(stargazer)
 library(gridExtra)
@@ -748,36 +748,36 @@ h2000_summary_final <- h2000_summary_final %>%
 
 ```
 
-### Previous childbirth
+<!-- ### Previous childbirth -->
 
-We remove "cohort_name %>% filter((group != "Men" & is.na(PreviousChildbirth)))%>% nrow()" female donors who did not answer the question on childbirth: 
-  * FinDonor: `r blood_data_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
-  * FinRisk97: `r fr1997_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
-  * Health2000: `r h2000_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()`
+<!-- We remove "cohort_name %>% filter((group != "Men" & is.na(PreviousChildbirth)))%>% nrow()" female donors who did not answer the question on childbirth:  -->
+<!--   * FinDonor: `r blood_data_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()` -->
+<!--   * FinRisk97: `r fr1997_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()` -->
+<!--   * Health2000: `r h2000_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth)))%>% nrow()` -->
 
-```{r}
-#### FinDonor
-nb_removed_blood <- nb_removed_blood +
-                            blood_data_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth))) %>% nrow 
+<!-- ```{r} -->
+<!-- #### FinDonor -->
+<!-- nb_removed_blood <- nb_removed_blood + -->
+<!--                             blood_data_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth))) %>% nrow  -->
 
-blood_data_summary_final <- blood_data_summary_final %>% 
-  filter(!(Group != "Men" & is.na(PreviousChildbirth)))
+<!-- blood_data_summary_final <- blood_data_summary_final %>%  -->
+<!--   filter(!(Group != "Men" & is.na(PreviousChildbirth))) -->
 
-#### FinRisk97
-nb_removed_fr97 <- nb_removed_fr97 +
-                            fr1997_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth))) %>% nrow 
+<!-- #### FinRisk97 -->
+<!-- nb_removed_fr97 <- nb_removed_fr97 + -->
+<!--                             fr1997_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth))) %>% nrow  -->
 
-fr1997_summary_final <- fr1997_summary_final %>% 
-  filter(!(Group != "Men" & is.na(PreviousChildbirth)))
+<!-- fr1997_summary_final <- fr1997_summary_final %>%  -->
+<!--   filter(!(Group != "Men" & is.na(PreviousChildbirth))) -->
 
-#### Health2000
-nb_removed_h2000 <- nb_removed_h2000 +
-                            h2000_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth))) %>% nrow 
+<!-- #### Health2000 -->
+<!-- nb_removed_h2000 <- nb_removed_h2000 + -->
+<!--                             h2000_summary_final %>% filter((Group != "Men" & is.na(PreviousChildbirth))) %>% nrow  -->
 
-h2000_summary_final <- h2000_summary_final %>% 
-  filter(!(Group != "Men" & is.na(PreviousChildbirth)))
+<!-- h2000_summary_final <- h2000_summary_final %>%  -->
+<!--   filter(!(Group != "Men" & is.na(PreviousChildbirth))) -->
 
-```
+<!-- ``` -->
 
 ### Current pregnancy
 
@@ -810,63 +810,63 @@ h2000_summary_final$CurrentPregnancy[is.na(h2000_summary_final$CurrentPregnancy)
 ```
 
 
-### Iron supplementation 
+<!-- ### Iron supplementation  -->
 
-We remove `r blood_data_summary_final %>% mutate(IronComplienceNumeric = ifelse(GivenIronSupplements == FALSE, 0, IronComplienceNumeric )) %>%  filter(is.na(IronComplienceNumeric)) %>% nrow()` donors that did not answer the two questions (did they receive iron supplements at during their last donation and supplement complience)
+<!-- We remove `r blood_data_summary_final %>% mutate(IronComplienceNumeric = ifelse(GivenIronSupplements == FALSE, 0, IronComplienceNumeric )) %>%  filter(is.na(IronComplienceNumeric)) %>% nrow()` donors that did not answer the two questions (did they receive iron supplements at during their last donation and supplement complience) -->
 
-For the modelling, we impute a 0 (no supplementation) to iron_comp_c when the donor reports not being offered iron supplementation.
+<!-- For the modelling, we impute a 0 (no supplementation) to iron_comp_c when the donor reports not being offered iron supplementation. -->
 
-This is not done for the general population cohorts, as they were not asked about iron supplementation and as such all observation are input as 0 (these questions specifically concern iron supplements provided in conjuction with blood donation). 
+<!-- This is not done for the general population cohorts, as they were not asked about iron supplementation and as such all observation are input as 0 (these questions specifically concern iron supplements provided in conjuction with blood donation).  -->
 
-```{r}
-nb_removed_blood <- nb_removed_blood +
-                            blood_data_summary_final %>% 
-                              mutate(IronComplienceNumeric = ifelse(GivenIronSupplements == FALSE, 0, IronComplienceNumeric)) %>% 
-                              filter(is.na(IronComplienceNumeric)) %>% 
-                              nrow() 
+<!-- ```{r} -->
+<!-- nb_removed_blood <- nb_removed_blood + -->
+<!--                             blood_data_summary_final %>%  -->
+<!--                               mutate(IronComplienceNumeric = ifelse(GivenIronSupplements == FALSE, 0, IronComplienceNumeric)) %>%  -->
+<!--                               filter(is.na(IronComplienceNumeric)) %>%  -->
+<!--                               nrow()  -->
 
-blood_data_summary_final <- blood_data_summary_final %>% 
-  mutate(IronComplienceNumeric = ifelse(GivenIronSupplements == FALSE, 0, IronComplienceNumeric )) %>% 
-  filter(!is.na(IronComplienceNumeric))
-```
+<!-- blood_data_summary_final <- blood_data_summary_final %>%  -->
+<!--   mutate(IronComplienceNumeric = ifelse(GivenIronSupplements == FALSE, 0, IronComplienceNumeric )) %>%  -->
+<!--   filter(!is.na(IronComplienceNumeric)) -->
+<!-- ``` -->
 
-### Red meat intake 
+<!-- ### Red meat intake  -->
 
-We remove "cohort_name %>% filter(is.na(RedMeat)) %>% nrow()" participants for whom we do not have Smoking data:
-  * Findonor: `r blood_data_summary_final %>% filter(is.na(RedMeat)) %>% nrow()` 
-  * FinRisk97: `r fr1997_summary_final %>% filter(is.na(RedMeat)) %>% nrow()`  
+<!-- We remove "cohort_name %>% filter(is.na(RedMeat)) %>% nrow()" participants for whom we do not have Smoking data: -->
+<!--   * Findonor: `r blood_data_summary_final %>% filter(is.na(RedMeat)) %>% nrow()`  -->
+<!--   * FinRisk97: `r fr1997_summary_final %>% filter(is.na(RedMeat)) %>% nrow()`   -->
 
-Health2000 participants were not asked about red meat intake.
+<!-- Health2000 participants were not asked about red meat intake. -->
 
-```{r message=FALSE, warning=FALSE}
-# FinDonor
-donors_to_remove <- blood_data_summary_final %>%
-  dplyr::select(ID, Group, RedMeat) %>%
-  gather(key= question, value = answer, -ID,-Group) %>%
-  filter(is.na(answer)) %>%
-  dplyr::select(Group, ID) %>%
-  distinct(ID, Group)
+<!-- ```{r message=FALSE, warning=FALSE} -->
+<!-- # FinDonor -->
+<!-- donors_to_remove <- blood_data_summary_final %>% -->
+<!--   dplyr::select(ID, Group, RedMeat) %>% -->
+<!--   gather(key= question, value = answer, -ID,-Group) %>% -->
+<!--   filter(is.na(answer)) %>% -->
+<!--   dplyr::select(Group, ID) %>% -->
+<!--   distinct(ID, Group) -->
 
-blood_data_summary_final <- blood_data_summary_final %>%
-  filter(!ID %in% donors_to_remove$ID)
+<!-- blood_data_summary_final <- blood_data_summary_final %>% -->
+<!--   filter(!ID %in% donors_to_remove$ID) -->
 
-nb_removed_blood <- nb_removed_blood +
-                            donors_to_remove %>% nrow()
+<!-- nb_removed_blood <- nb_removed_blood + -->
+<!--                             donors_to_remove %>% nrow() -->
 
-# FinRisk97
-finrisk97_to_remove <- fr1997_summary_final %>%
-  dplyr::select(ID, Group, RedMeat) %>%
-  gather(key= question, value = answer, -ID,-Group) %>%
-  filter(is.na(answer)) %>%
-  dplyr::select(Group, ID) %>%
-  distinct(ID, Group)
+<!-- # FinRisk97 -->
+<!-- finrisk97_to_remove <- fr1997_summary_final %>% -->
+<!--   dplyr::select(ID, Group, RedMeat) %>% -->
+<!--   gather(key= question, value = answer, -ID,-Group) %>% -->
+<!--   filter(is.na(answer)) %>% -->
+<!--   dplyr::select(Group, ID) %>% -->
+<!--   distinct(ID, Group) -->
 
-fr1997_summary_final <- fr1997_summary_final %>%
-  filter(!ID %in% finrisk97_to_remove$ID)
+<!-- fr1997_summary_final <- fr1997_summary_final %>% -->
+<!--   filter(!ID %in% finrisk97_to_remove$ID) -->
 
-nb_removed_fr97 <- nb_removed_fr97 +
-                            finrisk97_to_remove %>% nrow()
-```
+<!-- nb_removed_fr97 <- nb_removed_fr97 + -->
+<!--                             finrisk97_to_remove %>% nrow() -->
+<!-- ``` -->
 
 ### Age
 
@@ -997,59 +997,59 @@ h2000_summary_final %>%
 
 ## Recode variables
 
-### Red meat
+<!-- ### Red meat -->
 
-Next we recode red meat consumption into a linear variable. We use a linear scale from 1 to 4 for and mapped the different responses to correspond to the four options for the FinDonor and FinRisk97 cohorts. Data on red meat consumption was not avaliable in the Health2000 cohort.  
+<!-- Next we recode red meat consumption into a linear variable. We use a linear scale from 1 to 4 for and mapped the different responses to correspond to the four options for the FinDonor and FinRisk97 cohorts. Data on red meat consumption was not avaliable in the Health2000 cohort.   -->
 
-* red meat:
-    * FinDonor
-        * "never" ~ 1,
-              # never
-        * "less_than_once_weekly" ~ 2,
-              # less than once a week
-        * "1.3_week" or "4.6_week"~ 3,
-              # 1-3 times a week
-              # 4-6 times a week
-        * "daily" or "several_daily" ~ 4,
-              # daily
-              # several times a day
-    * FinRisk97
-        * "1" ~ 1, 
-              # 1 = more seldom than once a month or not at all
-        * "2" ~ 2,
-              # 2 = once or twice a month
-        * "3" or "4" or "5" ~ 3,
-              # 3 = once a week
-              # 4 = twice a week or more often
-              # 5 = almost daily
-        * "5" or "several_daily" ~ 4,
-              # 6 = daily
-              # 7 = several times a day
-              
-This will create a new variable, RedMeat_n. As we don't have red meat data in the Health2000 cohort, we need to make a column, name it RedMeat_n and impute the observations as n/a.
+<!-- * red meat: -->
+<!--     * FinDonor -->
+<!--         * "never" ~ 1, -->
+<!--               # never -->
+<!--         * "less_than_once_weekly" ~ 2, -->
+<!--               # less than once a week -->
+<!--         * "1.3_week" or "4.6_week"~ 3, -->
+<!--               # 1-3 times a week -->
+<!--               # 4-6 times a week -->
+<!--         * "daily" or "several_daily" ~ 4, -->
+<!--               # daily -->
+<!--               # several times a day -->
+<!--     * FinRisk97 -->
+<!--         * "1" ~ 1,  -->
+<!--               # 1 = more seldom than once a month or not at all -->
+<!--         * "2" ~ 2, -->
+<!--               # 2 = once or twice a month -->
+<!--         * "3" or "4" or "5" ~ 3, -->
+<!--               # 3 = once a week -->
+<!--               # 4 = twice a week or more often -->
+<!--               # 5 = almost daily -->
+<!--         * "5" or "several_daily" ~ 4, -->
+<!--               # 6 = daily -->
+<!--               # 7 = several times a day -->
 
-```{r}
-# FinDonor
-blood_data_summary_final <- blood_data_summary_final %>% 
-  mutate(RedMeat_n = case_when(
-    RedMeat == "never" ~ 1,
-    RedMeat == "less_than_once_weekly" ~ 2,
-    RedMeat %in% c("1.3_week" , "4.6_week") ~ 3,
-    TRUE   ~ 4 )) 
+<!-- This will create a new variable, RedMeat_n. As we don't have red meat data in the Health2000 cohort, we need to make a column, name it RedMeat_n and impute the observations as n/a. -->
 
-# FinRisk97
-fr1997_summary_final <- fr1997_summary_final %>% 
-  mutate(RedMeat_n = case_when(
-    RedMeat == "1" ~ 1,
-    RedMeat == "2" ~ 2,
-    RedMeat %in% c("3" , "4", "5") ~ 3,
-    TRUE   ~ 4 )) # "6" | "7"
-  
-# Health2000
-h2000_summary_final$RedMeat_n <- NA
+<!-- ```{r} -->
+<!-- # FinDonor -->
+<!-- blood_data_summary_final <- blood_data_summary_final %>%  -->
+<!--   mutate(RedMeat_n = case_when( -->
+<!--     RedMeat == "never" ~ 1, -->
+<!--     RedMeat == "less_than_once_weekly" ~ 2, -->
+<!--     RedMeat %in% c("1.3_week" , "4.6_week") ~ 3, -->
+<!--     TRUE   ~ 4 ))  -->
+
+<!-- # FinRisk97 -->
+<!-- fr1997_summary_final <- fr1997_summary_final %>%  -->
+<!--   mutate(RedMeat_n = case_when( -->
+<!--     RedMeat == "1" ~ 1, -->
+<!--     RedMeat == "2" ~ 2, -->
+<!--     RedMeat %in% c("3" , "4", "5") ~ 3, -->
+<!--     TRUE   ~ 4 )) # "6" | "7" -->
+
+<!-- # Health2000 -->
+<!-- h2000_summary_final$RedMeat_n <- NA -->
 
 
-```
+<!-- ``` -->
 
 ### CRP
 
@@ -1073,69 +1073,69 @@ blood_data_summary_final <- blood_data_summary_final %>%
 # Save original CRP for later use, this is needed as we will concatenate this later
 ```
 
-### Previous childbirth
+<!-- ### Previous childbirth -->
 
-Previous childbirth is recoded 
-* FinDonor: have you given birth? no=no, yes=yes
-* FinRisk97: how many children have you given birth to? 1=none, 2=one, 3=two, 4=three or more
-* Health2000: have you given birth? 0=no, 1=yes
+<!-- Previous childbirth is recoded  -->
+<!-- * FinDonor: have you given birth? no=no, yes=yes -->
+<!-- * FinRisk97: how many children have you given birth to? 1=none, 2=one, 3=two, 4=three or more -->
+<!-- * Health2000: have you given birth? 0=no, 1=yes -->
 
-Nulliparous women are coded as 0 (no) and reporting childbirth or giving birth to any number of children as 1 (yes). 
+<!-- Nulliparous women are coded as 0 (no) and reporting childbirth or giving birth to any number of children as 1 (yes).  -->
 
-```{r}
-# FinDonor
-blood_data_summary_final <- blood_data_summary_final %>% 
-  mutate(PreviousChildbirth = case_when(
-    PreviousChildbirth == "no" ~ 0,
-    PreviousChildbirth == "yes" ~ 1)) 
+<!-- ```{r} -->
+<!-- # FinDonor -->
+<!-- blood_data_summary_final <- blood_data_summary_final %>%  -->
+<!--   mutate(PreviousChildbirth = case_when( -->
+<!--     PreviousChildbirth == "no" ~ 0, -->
+<!--     PreviousChildbirth == "yes" ~ 1))  -->
 
-# FinRisk97
-fr1997_summary_final <- fr1997_summary_final %>% 
-  mutate(PreviousChildbirth = case_when(
-    PreviousChildbirth == "1" ~ 0,
-    PreviousChildbirth %in% c("2" , "3", "4") ~ 1)) 
-    
-
-```
-
-### Regions
-
-Assign the participants to regions based on university hospital districts. FinDonor study participants all come from the capital region.
-
-Health2000:
-	1	HYKS  
-	2	TYKS 
-	3	TAYS
-	4	KYS
-	5	OYS
+<!-- # FinRisk97 -->
+<!-- fr1997_summary_final <- fr1997_summary_final %>%  -->
+<!--   mutate(PreviousChildbirth = case_when( -->
+<!--     PreviousChildbirth == "1" ~ 0, -->
+<!--     PreviousChildbirth %in% c("2" , "3", "4") ~ 1))  -->
 
 
-FinRisk97:
-  2 North Karelia --> KYS
-  3 North Savonia --> KYS
-  4 Turku and Loimaa --> TYKS
-  5 Helsinki and Vantaa --> HYKS
-  6 Oulu province --> OYS
+<!-- ``` -->
 
-```{r}
-blood_data_summary_final$Region <- "HYKS"
+<!-- ### Regions -->
 
-fr1997_summary_final <- fr1997_summary_final %>% 
-  mutate(Region = case_when(
-    Region == "2" ~ "KYS",
-    Region == "3" ~ "KYS",
-    Region == "4" ~ "TYKS",
-    Region == "5" ~ "HYKS",
-    Region == "6" ~ "OYS"))
+<!-- Assign the participants to regions based on university hospital districts. FinDonor study participants all come from the capital region. -->
 
-h2000_summary_final <- h2000_summary_final %>% 
-  mutate(Region = case_when(
-    Region == "1" ~ "HYKS",
-    Region == "2" ~ "TYKS",
-    Region == "3" ~ "TAYS",
-    Region == "4" ~ "KYS",
-    Region == "5" ~ "OYS"))
-```
+<!-- Health2000: -->
+<!-- 	1	HYKS   -->
+<!-- 	2	TYKS  -->
+<!-- 	3	TAYS -->
+<!-- 	4	KYS -->
+<!-- 	5	OYS -->
+
+
+<!-- FinRisk97: -->
+<!--   2 North Karelia --> KYS -->
+<!--   3 North Savonia --> KYS -->
+<!--   4 Turku and Loimaa --> TYKS -->
+<!--   5 Helsinki and Vantaa --> HYKS -->
+<!--   6 Oulu province --> OYS -->
+
+<!-- ```{r} -->
+<!-- blood_data_summary_final$Region <- "HYKS" -->
+
+<!-- fr1997_summary_final <- fr1997_summary_final %>%  -->
+<!--   mutate(Region = case_when( -->
+<!--     Region == "2" ~ "KYS", -->
+<!--     Region == "3" ~ "KYS", -->
+<!--     Region == "4" ~ "TYKS", -->
+<!--     Region == "5" ~ "HYKS", -->
+<!--     Region == "6" ~ "OYS")) -->
+
+<!-- h2000_summary_final <- h2000_summary_final %>%  -->
+<!--   mutate(Region = case_when( -->
+<!--     Region == "1" ~ "HYKS", -->
+<!--     Region == "2" ~ "TYKS", -->
+<!--     Region == "3" ~ "TAYS", -->
+<!--     Region == "4" ~ "KYS", -->
+<!--     Region == "5" ~ "OYS")) -->
+<!-- ``` -->
 
 ## Merging cohorts into one table 
 
@@ -1145,24 +1145,24 @@ For the code to work all three cohorts need to be merged into one single table. 
 ### mutate smoking and pregnancy 
 blood_data_summary_final <- blood_data_summary_final %>% 
   dplyr::select(ID, Group, Sex, Age, TwoYearsFromStartCount_FB, DaysToPreviousFB,
-                Ferritin, Hb, BMI, blood_vol, Menstruation, Smoking, RedMeat_n, IronComplienceNumeric, PreviousChildbirth,
-                CRP, CRPori, Region, Weight, Cohort) %>% 
+                Ferritin, Hb, BMI, blood_vol, Menstruation, Smoking,
+                CRP, CRPori, Weight, Cohort) %>% 
     mutate(Smoking = ifelse(Smoking == "daily", "yes", "no"),
          Smoking = factor(Smoking, levels = c( "no",  "yes")))
 
 ### mutate smoking and pregnancy 
 fr1997_summary_final <- fr1997_summary_final %>% 
   dplyr::select(ID, Group, Sex, Age, TwoYearsFromStartCount_FB, DaysToPreviousFB,
-                Ferritin, Hb, BMI, blood_vol, Menstruation, Smoking, RedMeat_n, IronComplienceNumeric, PreviousChildbirth,
-                CRP, CRPori, Region, Weight, Cohort) %>% 
+                Ferritin, Hb, BMI, blood_vol, Menstruation, Smoking,
+                CRP, CRPori, Weight, Cohort) %>% 
        mutate(Smoking = ifelse(Smoking == "1", "yes", "no"),
        Smoking = factor(Smoking, levels = c( "no",  "yes")))
 
 ### mutate smoking and pregnancy
 h2000_summary_final <- h2000_summary_final %>% 
   dplyr::select(ID, Group, Sex, Age, TwoYearsFromStartCount_FB, DaysToPreviousFB,
-                Ferritin, Hb, BMI, blood_vol, Menstruation, Smoking, RedMeat_n, IronComplienceNumeric, PreviousChildbirth,
-                CRP, CRPori,Region, Weight, Cohort) %>% 
+                Ferritin, Hb, BMI, blood_vol, Menstruation, Smoking,
+                CRP, CRPori, Weight, Cohort) %>% 
          mutate(Smoking = ifelse(Smoking == "1", "yes", "no"),
          Smoking = factor(Smoking, levels = c( "no",  "yes")))
          
@@ -1188,23 +1188,46 @@ summary_all_cohorts %>%
  
 ```
 
-## Table 1
+
+## Population description
+
+### Data overwiew
+
+```{r}
+initial_analysis <- function(summary_all_cohorts)
+{
+  glimpse(summary_all_cohorts) #overview of type of variables (rows, column, head)
+  print(status(summary_all_cohorts)) #returns overview in table format
+  freq(summary_all_cohorts) #analysis for categorical variables (factor, character) 
+  print(profiling_num(summary_all_cohorts)) #analysis of numerical variables
+  plot_num(summary_all_cohorts) #analysis of numerical variables
+  describe(summary_all_cohorts) #analysis of numerical and categorical variables at the same time
+}
+
+initial_analysis(summary_all_cohorts)
+```
+
+### Table 1
 
 ```{r}
 myVars <- c("Age" ,
   "Ferritin (ug/l)",
   "Hb (g/l)",
-  "BMI",
-  "Blood volume (l)"
-)
-non_normal_vars <- c("Ferritin (ug/l)")
+  "Smoker",
+  "Blood volume (l)",
+  "Donation frequency during past two years",
+  "Number of days since last whole blood donation")
+
+non_normal_vars <- c("Ferritin (ug/l)", "Donation frequency during past two years", "Number of days since last whole blood donation")
 table1data <- summary_all_cohorts  %>%
   rename(
   "Age" = Age,
   "Ferritin (ug/l)" = Ferritin,
   "Hb (g/l)" = Hb,
-  "BMI" = BMI,
- "Blood volume (l)" = blood_vol
+  "Smoker" = Smoking,
+  "Blood volume (l)" = blood_vol,
+  "Donation frequency during past two years" = TwoYearsFromStartCount_FB,
+  "Number of days since last whole blood donation" = DaysToPreviousFB
 )
 
 summary_table <- CreateTableOne(data = 
@@ -1243,8 +1266,8 @@ kable_styling(
 ```{r}
 regression_cohorts <- summary_all_cohorts %>% 
     rename(donation_count = TwoYearsFromStartCount_FB,
-            last_donation = DaysToPreviousFB,
-            iron_complience = IronComplienceNumeric) %>% 
+           #iron_complience = IronComplienceNumeric, 
+           last_donation = DaysToPreviousFB) %>% 
      mutate(Age = Age / 5, 
             Weight = Weight / 10,
             donation_count_2 = donation_count^2,
@@ -1265,22 +1288,12 @@ save(regression_cohorts, file = "../data/ID_data_regression_cohorts.rdata")
 
 Data transformations:
 
-* Log transformed variables: 
-    * Ferritin
-    * CRP 
-  
-* Age is divided by 5 and weight is devided by 10 to simplify coefficient interpretation
-* Number of days before donation is transformed as $log\_last\_donation = log(last\_donation)/log(2)$ to help with the interpretation of coefficients. 
-    * An increase in one of the transformed variable is equivalent to a doubling of the number of days since last donation.
-
+* Ferritin is log transformed
+* Number of days before donation is transformed as $log\_last\_donation = log(last\_donation)/log(2)$ to help with the interpretation of coefficients. An increase in one of the transformed variable is equivalent to a doubling of the number of days since last donation.
 * Standardization:
-    * Standardized coefficients: 
-        * All dependent and independent variables were standardized
-      
-    * Coefficients:
-        * All dependent variables entered as continuous varaibles are centered but not scaled. 
-
-We center all variables entered as continuous.
+    * Standardized coefficients: all dependent and independent variables were standardized
+    * Coefficients: all dependent variables entered as continuous varaibles are centered but not scaled. 
+* All variables entered as continuous are centered
 
 ## Premenopausal women
 
@@ -1291,7 +1304,7 @@ test_data_pre_women <- regression_cohorts %>%
   filter(Group == "Pre_menopause_women")
 
 test_data_pre_women <- test_data_pre_women %>% 
-  dplyr::select(ID, Group, Sex, Age, donation_count, last_donation, Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, iron_complience, PreviousChildbirth, CRP, Cohort, donation_count_2, log_ferritin, log_last_donation, log_CRP, iron_deficiency, Region, Weight, blood_vol) %>%
+  dplyr::select(ID, Group, Sex, Age, donation_count, last_donation, Ferritin, Hb, BMI, Menstruation, Smoking, CRP, Cohort, donation_count_2, log_ferritin, log_last_donation, log_CRP, iron_deficiency, Weight, blood_vol) %>%
   mutate(Age = scale(Age, scale = FALSE)[,1],
          Weight = scale(Weight, scale = FALSE)[,1],
          log_CRP = scale(log_CRP, scale = FALSE)[,1],
@@ -1318,7 +1331,7 @@ test_data_post_women <- regression_cohorts %>%
   filter(Group == "Post_menopause_women") 
 
 test_data_post_women <- test_data_post_women %>% 
-  dplyr::select(ID, Group, Sex, Age, donation_count, last_donation, Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, iron_complience, PreviousChildbirth, CRP, Cohort, donation_count_2, log_ferritin, log_last_donation, log_CRP, iron_deficiency, Region, Weight, blood_vol) %>%
+  dplyr::select(ID, Group, Sex, Age, donation_count, last_donation, Ferritin, Hb, BMI, Menstruation, Smoking, CRP, Cohort, donation_count_2, log_ferritin, log_last_donation, log_CRP, iron_deficiency, Weight, blood_vol) %>%
   mutate(Age = scale(Age, scale = FALSE)[,1],
          Weight = scale(Weight, scale = FALSE)[,1],
          log_CRP = scale(log_CRP, scale = FALSE)[,1],
@@ -1346,7 +1359,7 @@ test_data_men <- regression_cohorts %>%
   filter(Group == "Men") 
 
 test_data_men <- test_data_men %>% 
-  dplyr::select(ID, Group, Sex, Age, donation_count, last_donation, Ferritin, Hb, BMI, Menstruation, Smoking, RedMeat_n, iron_complience, PreviousChildbirth, CRP, Cohort, donation_count_2, log_ferritin, log_last_donation, log_CRP, iron_deficiency, Region, Weight, blood_vol) %>%
+  dplyr::select(ID, Group, Sex, Age, donation_count, last_donation, Ferritin, Hb, BMI, Menstruation, Smoking, CRP, Cohort, donation_count_2, log_ferritin, log_last_donation, log_CRP, iron_deficiency, Weight, blood_vol) %>%
   mutate(Age = scale(Age, scale = FALSE)[,1],
          Weight = scale(Weight, scale = FALSE)[,1],
          log_CRP = scale(log_CRP, scale = FALSE)[,1],
@@ -1374,7 +1387,7 @@ write.table(test_data_men, file = paste0("../results/test_data_men",".txt"))
 # Premenopausal women
 ggpairs(test_data_pre_women, 
         columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
-                    "log_last_donation"),
+                    "log_last_donation", "blood_vol"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
@@ -1382,7 +1395,7 @@ ggpairs(test_data_pre_women,
 # Postmenopausal women
 ggpairs(test_data_post_women, 
         columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
-                    "log_last_donation"),
+                    "log_last_donation", "blood_vol"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
@@ -1390,7 +1403,7 @@ ggpairs(test_data_post_women,
 # Men
 ggpairs(test_data_men, 
         columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
-                    "log_last_donation"),
+                    "log_last_donation", "blood_vol"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE)
@@ -1405,7 +1418,7 @@ ggpairs(test_data_men,
 # Premenopausal women
 ggpairs(test_data_pre_women, ggplot2::aes(colour = Cohort, alpha = 0.5),
         columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
-                    "log_last_donation"),
+                    "log_last_donation", "blood_vol"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE) + 
@@ -1414,7 +1427,7 @@ ggpairs(test_data_pre_women, ggplot2::aes(colour = Cohort, alpha = 0.5),
 # Postmenopausal women
 ggpairs(test_data_post_women, ggplot2::aes(colour = Cohort, alpha = 0.5),
         columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
-                    "log_last_donation"),
+                    "log_last_donation", "blood_vol"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE) +
@@ -1423,7 +1436,7 @@ ggpairs(test_data_post_women, ggplot2::aes(colour = Cohort, alpha = 0.5),
 # Men
 ggpairs(test_data_men, ggplot2::aes(colour = Cohort, alpha = 0.5),
         columns = c("log_ferritin", "iron_deficiency", "Age", "log_CRP",  "donation_count", "donation_count_2",
-                    "log_last_donation"),
+                    "log_last_donation", "blood_vol"),
          lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
                       combo = wrap("facethist", binwidth = 0.5)),
         progress = FALSE) + 
@@ -1431,28 +1444,3 @@ ggtitle("Men")
 
 ```
 
-
-```{r, warning=FALSE}
-
-ggpairs(test_data_pre_women, ggplot2::aes(colour = Cohort, alpha = 0.5),
-        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI", "Menstruation", "Region", "Weight", "blood_vol"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE) + 
-ggtitle("Premenopausal women")
-
-ggpairs(test_data_post_women, ggplot2::aes(colour = Cohort, alpha = 0.5), 
-        columns = c("log_ferritin", "iron_deficiency", "PreviousChildbirth",  "RedMeat_n", "Smoking", "iron_complience", "BMI", "Region", "Weight", "blood_vol"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE)+ 
-ggtitle("Postmenopausal women")
-
-ggpairs(test_data_men, ggplot2::aes(colour = Cohort, alpha = 0.5),
-        columns = c("log_ferritin", "iron_deficiency",  "RedMeat_n", "Smoking", "iron_complience", "BMI", "Region", "Weight",  "blood_vol"),
-         lower = list(continuous = wrap("points", alpha = 0.3,size=0.1),
-                      combo = wrap("facethist", binwidth = 0.5)),
-        progress = FALSE) + 
-ggtitle("Men")
-
-```
