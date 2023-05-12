@@ -2,7 +2,10 @@
 title: "Low ferritin data"
 author: "Sofie Ekroos"
 date: "19.7.2021"
-output: pdf_document
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
 ---
 
 Based on Muriel Lobier's original code (https://github.com/FRCBS/iron_levels_of_blood_donors/blob/master/src/index.Rmd)
@@ -1190,22 +1193,6 @@ summary_all_cohorts %>%
 
 
 ## Population description
-
-### Data overwiew
-
-```{r}
-initial_analysis <- function(summary_all_cohorts)
-{
-  glimpse(summary_all_cohorts) #overview of type of variables (rows, column, head)
-  print(status(summary_all_cohorts)) #returns overview in table format
-  freq(summary_all_cohorts) #analysis for categorical variables (factor, character) 
-  print(profiling_num(summary_all_cohorts)) #analysis of numerical variables
-  plot_num(summary_all_cohorts) #analysis of numerical variables
-  describe(summary_all_cohorts) #analysis of numerical and categorical variables at the same time
-}
-
-initial_analysis(summary_all_cohorts)
-```
 
 ### Table 1
 
