@@ -90,9 +90,9 @@ logistic_men_b <- brm(iron_deficiency ~
                         #BMI + 
                         #Smoking + 
                         #iron_complience + 
-                        donation_count_2 + 
-                        donation_count +
-                        log_last_donation + 
+                        #donation_count_2 + 
+                        #donation_count +
+                        #log_last_donation + 
                         #log_CRP +
                         #Region + 
                         Weight +
@@ -119,9 +119,9 @@ logistic_pre_b <- brm(iron_deficiency ~
                         #BMI + 
                         #Smoking + 
                         #iron_complience + 
-                        donation_count_2 + 
-                        donation_count +
-                        log_last_donation + 
+                        #donation_count_2 + 
+                        #donation_count +
+                        #log_last_donation + 
                         #log_CRP +
                         #Region + 
                         Weight +
@@ -151,9 +151,9 @@ logistic_post_b <- brm(iron_deficiency ~
                         #BMI + 
                         #Smoking + 
                         #iron_complience + 
-                        donation_count_2 + 
-                        donation_count +
-                        log_last_donation + 
+                        #donation_count_2 + 
+                        #donation_count +
+                        #log_last_donation + 
                         #log_CRP +
                         #Region + 
                         Weight +
