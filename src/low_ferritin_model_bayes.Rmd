@@ -9,7 +9,7 @@ output: pdf_document
 
 # Summary
 
-Version 4: only include variables available for Dutch cohorts, BLOOD DONATION VARIABLES EXCLUDED
+Version 5: only include variables available for Dutch cohorts, BLOOD DONATION VARIABLES INCLUDED
 
 ```{r setup, , message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -83,16 +83,16 @@ regression_data_post <- all_cohorts %>%
 
 ```{r men}
 #men
-file <- "../results/bmodels/version4/logit_men_b"
+file <- "../results/bmodels/version5/logit_men_b"
 
 logistic_men_b <- brm(iron_deficiency ~ 
                         Age + 
                         #BMI + 
                         #Smoking + 
                         #iron_complience + 
-                        #donation_count_2 + 
-                        #donation_count +
-                        #log_last_donation + 
+                        donation_count_2 + 
+                        donation_count +
+                        log_last_donation + 
                         #log_CRP +
                         #Region + 
                         Weight +
@@ -112,16 +112,16 @@ summary(logistic_men_b)
 
 ```{r  pre}
 # premenopausal women
-file <- "../results/bmodels/version4/logit_pre_b"
+file <- "../results/bmodels/version5/logit_pre_b"
 
 logistic_pre_b <- brm(iron_deficiency ~ 
                         Age + 
                         #BMI + 
                         #Smoking + 
                         #iron_complience + 
-                        #donation_count_2 + 
-                        #donation_count +
-                        #log_last_donation + 
+                        donation_count_2 + 
+                        donation_count +
+                        log_last_donation + 
                         #log_CRP +
                         #Region + 
                         Weight +
@@ -144,16 +144,16 @@ summary(logistic_pre_b)
 
 ```{r  post}
 # postmenopausal women
-file <- "../results/bmodels/version4/logit_post_b"
+file <- "../results/bmodels/version5/logit_post_b"
 
 logistic_post_b <- brm(iron_deficiency ~
                        Age + 
                         #BMI + 
                         #Smoking + 
                         #iron_complience + 
-                        #donation_count_2 + 
-                        #donation_count +
-                        #log_last_donation + 
+                        donation_count_2 + 
+                        donation_count +
+                        log_last_donation + 
                         #log_CRP +
                         #Region + 
                         Weight +
@@ -380,7 +380,9 @@ p <- ggplot(plotdata, aes(x = m, y = regressor, color = Group)) +
   ) +
   guides(shape = "none") +
   theme_classic() +
-  ylab("Coefficient") 
+  xlab("Coefficient") +
+  theme(text = element_text(size = 20)) +
+  theme(axis.title.y = element_blank())
 
 p
 
@@ -388,14 +390,14 @@ p
 ```
 
 ```{r}
-ggplot2::ggsave(filename = "../results/figures/low_ferritin_model/version4_forest_all_cohorts_bayes.pdf",
+ggplot2::ggsave(filename = "../results/figures/low_ferritin_model/version5_forest_all_cohorts_bayes.pdf",
                 plot = p,
                 width = 35,
                 height = 25,
                 dpi = 600,
                 units = "cm")
 
-ggplot2::ggsave(filename = "../results/figures/low_ferritin_model/version4_forest_all_cohorts_bayes.png",
+ggplot2::ggsave(filename = "../results/figures/low_ferritin_model/version5_forest_all_cohorts_bayes.png",
                 plot = p,
                 width = 35,
                 height = 25,
@@ -405,7 +407,7 @@ ggplot2::ggsave(filename = "../results/figures/low_ferritin_model/version4_fores
 
 # save ORs for comparison with other models 
 OR_logistic_bayes <- plotdata
-save(OR_logistic_bayes, file = "../data/OR_low_ferritin_model_bayes_version4.rdata")
+save(OR_logistic_bayes, file = "../data/OR_low_ferritin_model_bayes_version5.rdata")
 ```
 
 ```{r , fig2, fig.height = 6, fig.width = 13 ,warning=FALSE}
@@ -426,14 +428,14 @@ p_pub
 ```
 
 ```{r}
-ggplot2::ggsave(filename = "../results/figures/low_ferritin_model/pub_version4_forest_all_cohorts_bayes.pdf",
+ggplot2::ggsave(filename = "../results/figures/low_ferritin_model/pub_version5_forest_all_cohorts_bayes.pdf",
                 plot = p_pub,
                 width = 35,
                 height = 25,
                 dpi = 600,
                 units = "cm")
 
-ggplot2::ggsave(filename = "../results/figures/low_ferritin_model/pub_version4_forest_all_cohorts_bayes.png",
+ggplot2::ggsave(filename = "../results/figures/low_ferritin_model/pub_version5_forest_all_cohorts_bayes.png",
                 plot = p_pub,
                 width = 35,
                 height = 25,
