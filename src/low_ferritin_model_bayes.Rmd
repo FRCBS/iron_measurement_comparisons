@@ -9,7 +9,7 @@ output: pdf_document
 
 # Summary
 
-Version 4: only include variables available for Dutch cohorts, BLOOD DONATION VARIABLES EXCLUDED.
+Version 5: only include variables available for Dutch cohorts, BLOOD DONATION VARIABLES INCLUDED.
 
 ```{r setup, , message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -31,9 +31,9 @@ Load data
 load("../data/ID_data_regression_cohorts.rdata")
 all_cohorts <- regression_cohorts
 
-all_cohorts <- all_cohorts %>% 
-  filter(!is.na(CRP)) %>% 
-  filter(! CRP >= 30)
+# all_cohorts <- all_cohorts %>% 
+#   filter(!is.na(CRP)) %>% 
+#   filter(! CRP >= 30)
 ```
 
 # All cohorts together 
@@ -90,9 +90,9 @@ logistic_men_b <- brm(iron_deficiency ~
                         #BMI + 
                         #Smoking + 
                         #iron_complience + 
-                        #donation_count_2 + 
-                        #donation_count +
-                        #log_last_donation + 
+                        donation_count_2 + 
+                        donation_count +
+                        log_last_donation + 
                         #log_CRP +
                         #Region + 
                         Weight +
@@ -119,9 +119,9 @@ logistic_pre_b <- brm(iron_deficiency ~
                         #BMI + 
                         #Smoking + 
                         #iron_complience + 
-                        #donation_count_2 + 
-                        #donation_count +
-                        #log_last_donation + 
+                        donation_count_2 + 
+                        donation_count +
+                        log_last_donation + 
                         #log_CRP +
                         #Region + 
                         Weight +
@@ -151,9 +151,9 @@ logistic_post_b <- brm(iron_deficiency ~
                         #BMI + 
                         #Smoking + 
                         #iron_complience + 
-                        #donation_count_2 + 
-                        #donation_count +
-                        #log_last_donation + 
+                        donation_count_2 + 
+                        donation_count +
+                        log_last_donation + 
                         #log_CRP +
                         #Region + 
                         Weight +
@@ -425,6 +425,22 @@ p_pub <- p + theme(axis.title = element_text(size = 14),
 p_pub
 ```
 
+```{r}
+ggplot2::ggsave(filename = "../results/figures/low_ferritin_model/pub_version4_forest_all_cohorts_bayes.pdf",
+                plot = p_pub,
+                width = 35,
+                height = 25,
+                dpi = 600,
+                units = "cm")
+
+ggplot2::ggsave(filename = "../results/figures/low_ferritin_model/pub_version4_forest_all_cohorts_bayes.png",
+                plot = p_pub,
+                width = 35,
+                height = 25,
+                dpi = 300,
+                units = "cm")
+```
+
 <!-- ## Compare to bootstrapped -->
 
 
@@ -568,30 +584,30 @@ p_pub
 
 <!-- ``` -->
 
-## Ferritin and CRP
+<!-- ## Ferritin and CRP -->
 
-```{r}
+<!-- ```{r} -->
 
-p <- ggplot(aes(y=Ferritin, x=CRP),data=summary_all_cohorts)
-p <- p+ geom_point()
-p <- p +  geom_hline(aes(yintercept=15))
-p <- p + facet_grid(Group~Cohort)
-p <- p + scale_x_log10() + scale_y_log10()
-p <- p + geom_smooth(method='gam')
-p
+<!-- p <- ggplot(aes(y=Ferritin, x=CRP),data=summary_all_cohorts) -->
+<!-- p <- p+ geom_point() -->
+<!-- p <- p +  geom_hline(aes(yintercept=15)) -->
+<!-- p <- p + facet_grid(Group~Cohort) -->
+<!-- p <- p + scale_x_log10() + scale_y_log10() -->
+<!-- p <- p + geom_smooth(method='gam') -->
+<!-- p -->
 
-```
+<!-- ``` -->
 
-## Ferritin and CRP, include linear model
+<!-- ## Ferritin and CRP, include linear model -->
 
-```{r}
-p <- ggplot(aes(y=Ferritin, x=CRP),data=summary_all_cohorts)
-p <- p+ geom_point()
-p <- p +  geom_hline(aes(yintercept=15))
-p <- p + facet_grid(Group~Cohort)
-p <- p + scale_x_log10() + scale_y_log10()
-p <- p + geom_smooth(method='gam')
-p <- p + geom_smooth(method="lm", color="red")
-p
-```
+<!-- ```{r} -->
+<!-- p <- ggplot(aes(y=Ferritin, x=CRP),data=summary_all_cohorts) -->
+<!-- p <- p+ geom_point() -->
+<!-- p <- p +  geom_hline(aes(yintercept=15)) -->
+<!-- p <- p + facet_grid(Group~Cohort) -->
+<!-- p <- p + scale_x_log10() + scale_y_log10() -->
+<!-- p <- p + geom_smooth(method='gam') -->
+<!-- p <- p + geom_smooth(method="lm", color="red") -->
+<!-- p -->
+<!-- ``` -->
 
