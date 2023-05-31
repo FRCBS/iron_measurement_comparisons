@@ -9,7 +9,7 @@ output: pdf_document
 
 # Summary
 
-Version 5: only include variables available for Dutch cohorts, BLOOD DONATION VARIABLES INCLUDED.
+Version 4: only include variables available for Dutch cohorts, BLOOD DONATION VARIABLES EXCLUDED
 
 ```{r setup, , message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
