@@ -1,7 +1,7 @@
 ---
 title: "Ferritin model prediction"
 author: "Mikko Arvas"
-date: "25.04.2021"
+date: "`r Sys.time()`"
 output: pdf_document
 
 ---
@@ -9,6 +9,7 @@ output: pdf_document
 
 # Summary
 
+Test if the ferritin models have any predictive power.
 
 ```{r setup, , message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -16,6 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(brms)
 library(bayesplot)
+library(knitr)
 
 ```
 
@@ -471,42 +473,48 @@ pred_men<- tibble(
     fer_pred = exp(1)^linear_men_b_p[, "Estimate"],
     fer = exp(1)^regression_data_men$log_ferritin,
     group="Men",
-    model="History"
+    model="History",
+    cohort=regression_data_men$Cohort
 )
 
 pred_post<- tibble(
     fer_pred = exp(1)^linear_post_b_p[, "Estimate"],
     fer = exp(1)^regression_data_post$log_ferritin,
     group="Post",
-    model="History"
+    model="History",
+    cohort=regression_data_post$Cohort
 )
 
 pred_pre<- tibble(
     fer_pred = exp(1)^linear_pre_b_p[, "Estimate"],
     fer = exp(1)^regression_data_pre$log_ferritin,
     group="Pre",
-    model="History"
+    model="History",
+    cohort=regression_data_pre$Cohort
 )
 
 pred_men_nc<- tibble(
     fer_pred = exp(1)^linear_men_b_p_nc[, "Estimate"],
     fer = exp(1)^regression_data_men$log_ferritin,
     group="Men",
-    model="No_history"
+    model="No_history",
+    cohort=regression_data_men$Cohort
 )
 
 pred_post_nc<- tibble(
     fer_pred = exp(1)^linear_post_b_p_nc[, "Estimate"],
     fer = exp(1)^regression_data_post$log_ferritin,
     group="Post",
-    model="No_history"
+    model="No_history",
+    cohort=regression_data_post$Cohort
 )
 
 pred_pre_nc<- tibble(
     fer_pred = exp(1)^linear_pre_b_p_nc[, "Estimate"],
     fer = exp(1)^regression_data_pre$log_ferritin,
     group="Pre",
-    model="No_history"
+    model="No_history",
+    cohort=regression_data_pre$Cohort
 )
 
 
@@ -521,7 +529,7 @@ data_sim <- bind_rows(
 
 
 p <- ggplot(data_sim,aes(y=fer_pred,x=fer))
-p <- p + geom_point(alpha=0.1)
+p <- p + geom_point(aes(color=cohort,fill=cohort),alpha=0.1)
 p <- p + geom_smooth(method = "lm")
 p <- p + geom_smooth(method = "gam")
 p <- p + facet_grid(model~group)
@@ -537,6 +545,14 @@ cors <- data_sim %>%
   summarise(
     r2 = round(summary(lm(fer_pred~fer))$r.squared, 2)
     )
-cors
+kable(cors)
 ```
 
+```{r}
+cors <- data_sim %>% 
+  group_by(group, model,cohort) %>%  
+  summarise(
+    r2 = round(summary(lm(fer_pred~fer))$r.squared, 2)
+    )
+kable(cors)
+```
