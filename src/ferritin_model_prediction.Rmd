@@ -24,7 +24,7 @@ library(knitr)
 
 # Data loading and preparation 
 
-Load data
+Load data.
 
 ```{r}
 load("../data/ID_data_regression_cohorts.rdata")
