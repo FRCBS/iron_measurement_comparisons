@@ -12,7 +12,7 @@ Version 5: rerun after data pathways fixed. Includes all the variables available
 
 ```{r setup, , message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-#library(tidyverse)
+library(tidyverse)
 library(brms)
 library(bayesplot)
 library(dplyr)
