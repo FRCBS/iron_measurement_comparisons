@@ -45,7 +45,7 @@ summary_all_cohorts <- summary_all_cohorts %>%
   filter(!is.na(Ferritin)) %>% 
   mutate(
     CRP=CRPori,
-    Region = as.factor(Region),
+    #Region = as.factor(Region),
     Sex=as.factor(Sex),
     Menstruation=as.factor(Menstruation),
   anemic = case_when(
@@ -129,9 +129,9 @@ CRP_0_true <- summary_all_cohorts %>%
          -ID,
          -TwoYearsFromStartCount_FB,
          -DaysToPreviousFB,
-         -IronComplienceNumeric,
+        # -IronComplienceNumeric,
          -Cohort,
-         -RedMeat_n,
+         #-RedMeat_n,
          -CRPori
          )
 
@@ -147,9 +147,9 @@ CRP_0_false <- summary_all_cohorts %>%
          -ID,
          -TwoYearsFromStartCount_FB,
          -DaysToPreviousFB,
-         -IronComplienceNumeric,
+        # -IronComplienceNumeric,
          -Cohort,
-         -RedMeat_n,
+        # -RedMeat_n,
          -CRPori
          )
   
@@ -172,3 +172,88 @@ summary(CRP_0_true %>% filter(Sex=="Women"))
 summary(CRP_0_false %>% filter(Sex=="Women"))
 ```
 No obvious differences. Although as expected BMI slightly smaller in the CRP_0 group, and ferritin and age too. Anyhow the CRP=0 data appears real.
+
+
+# Donation history for press
+
+
+```{r}
+# load FinDonor demographic data
+load("../data/r02ds.donorData.PRID.rdata")
+donor_demo <- output
+rm(output)
+
+tmp <- donor_demo %>% 
+  dplyr::select(releaseID,DonationCount_FB) %>% 
+  left_join(
+    summary_all_cohorts %>% dplyr::select(ID, Group, Sex, Age,TwoYearsFromStartCount_FB,DaysToPreviousFB),
+    by = c("releaseID" = "ID")
+    ) %>% 
+  mutate(
+    Group = case_match(Group,
+      "Pre_menopause_women" ~ "Pre-menopausal",
+      "Post_menopause_women" ~ "Post-menopausal",
+      "Men" ~"Men"
+    )
+  )
+
+dim(tmp)
+tmp <- na.omit(tmp)
+dim(tmp)
+
+```
+
+
+```{r}
+
+p <- ggplot(tmp,aes(x=TwoYearsFromStartCount_FB,col="white", fill=Group))
+p <- p + stat_bin(binwidth = 1)
+p <- p + facet_grid(Group ~.,scales = "free_y")
+p <- p + xlab("Count of whole blood donations 2 years \n before FinDonor enrollment visit")
+p <- p + ylab("Count of persons")
+p <- p +  
+scale_color_manual(values = c( "#00BFFF",  "#de2d26", "#ff85a2" ),
+                     limits = c( "Men",  "Post-menopausal", "Pre-menopausal" )) +
+  scale_fill_manual(values = c( "#00BFFF",  "#de2d26", "#ff85a2" ),
+                     limits = c( "Men",  "Post-menopausal", "Pre-menopausal" )) +
+theme_classic() +
+  theme(legend.position = "none",
+        panel.grid.minor.y = element_blank(),
+        axis.line = element_line(colour="black"),
+        #axis.title.y = element_blank(),
+        axis.title.x = element_text(size = 10),
+        axis.text = element_text(size = 8),
+        panel.grid.major.y = element_blank())
+
+p
+ggplot2::ggsave("../results/figures/donation_history_2y.png",device = "png", height = 12, width = 11, units = "cm" )
+
+```
+
+
+
+```{r}
+
+p <- ggplot(tmp,aes(x=DonationCount_FB,col="white", fill=Group))
+p <- p + stat_bin(binwidth = 5,)
+p <- p + facet_grid(Group ~.,scales = "free_y")
+p <- p + xlab("Count of life time whole blood donations \n before FinDonor enrollment visit")
+p <- p + ylab("Count of persons")
+p <- p +  #scale_x_log2() +
+scale_color_manual(values = c( "#00BFFF",  "#de2d26", "#ff85a2" ),
+                     limits = c( "Men",  "Post-menopausal", "Pre-menopausal" )) +
+  scale_fill_manual(values = c( "#00BFFF",  "#de2d26", "#ff85a2" ),
+                     limits = c( "Men",  "Post-menopausal", "Pre-menopausal" )) +
+theme_classic() +
+  theme(legend.position = "none",
+        panel.grid.minor.y = element_blank(),
+        axis.line = element_line(colour="black"),
+        #axis.title.y = element_blank(),
+        axis.title.x = element_text(size = 10),
+        axis.text = element_text(size = 8),
+        panel.grid.major.y = element_blank())
+
+p
+ggplot2::ggsave("../results/figures/donation_history.png",device = "png", height = 12, width = 11, units = "cm" )
+
+```
