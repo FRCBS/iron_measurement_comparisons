@@ -1,0 +1,461 @@
+---
+title: "Ferritin median change simulation"
+author: "Mikko Arvas"
+date: "12.04.2023"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+# Summary
+
+Simulate effect of changing ferritin median and difference between genpop and donors.
+
+
+```{r setup, , message = FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(broom)
+library(colorspace)
+# echo "rmarkdown::render('ferritin_model_bayes_version3.Rmd', clean=TRUE,output_format='pdf_document',output_file='../results/ferritin_model_bayes/ferritin_model_bayes_version3.pdf')" | R --slave
+```
+
+
+
+
+# Data loading and preparation 
+
+Load data
+
+```{r}
+load("../data/ID_data_regression_cohorts_genpop_combined.rdata")
+all_cohorts <- regression_cohorts
+
+
+```
+
+
+
+# All cohorts together 
+
+## Data
+```{r}
+regression_data_men <- all_cohorts %>% 
+  filter(Group == "Men") %>% 
+  dplyr::select(ID, log_ferritin, Age, donation_count, log_last_donation, Cohort, Group, blood_vol) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         blood_vol = scale(blood_vol, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2) 
+
+regression_data_pre <- all_cohorts %>% 
+  filter(Group == "Pre_menopause_women") %>% 
+  dplyr::select(ID, log_ferritin, Age,donation_count, log_last_donation, Cohort, Group,blood_vol) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         blood_vol = scale(blood_vol, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2) 
+
+regression_data_post <- all_cohorts %>% 
+  filter(Group == "Post_menopause_women") %>% 
+  dplyr::select(ID, log_ferritin, Age, donation_count, log_last_donation, Cohort, Group, blood_vol) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         blood_vol = scale(blood_vol, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2) 
+
+
+```
+
+## Test models 
+
+
+
+```{r men}
+
+linear_men <- lm(log_ferritin ~ 
+                        Age + 
+                        donation_count_2 + 
+                        donation_count +
+                        log_last_donation + 
+                        blood_vol+
+                        Cohort, 
+                      data = regression_data_men, 
+)
+
+summary(linear_men)
+
+```
+
+
+```{r}
+confint(linear_men)
+```
+
+
+
+```{r  pre}
+# premenopausal women
+
+linear_pre <- lm(log_ferritin ~ 
+                      Age + 
+                        donation_count_2 + 
+                        donation_count +
+                        log_last_donation + 
+                        Cohort +
+                        blood_vol,
+                      data = regression_data_pre,
+  )
+
+summary(linear_pre)
+
+
+```
+
+```{r}
+confint(linear_pre)
+```
+
+
+
+```{r  post}
+# postmenopausal women
+
+linear_post <- lm(log_ferritin ~ 
+                        Age + 
+                        donation_count_2 + 
+                        donation_count +
+                        log_last_donation + 
+                        Cohort +
+                        blood_vol,
+                     data = regression_data_post, 
+)
+
+summary(linear_post)
+```
+
+```{r}
+confint(linear_post)
+```
+
+
+
+```{r}
+
+p <- ggplot(data=all_cohorts)
+p <- p +  geom_histogram(aes(x=log_ferritin))
+p <- p +  facet_wrap(~Group)
+p
+```
+
+# Test the effect of changing the median of the cohorts
+
+
+```{r}
+
+# Increase Finn premenopausal log_ferritin to same level as Dutch men
+# in Blood donors to median = 55
+# in Gen pop to median = 134
+
+bdmed <- log(55 - 26)
+gpmed <- log(134 - 26)
+
+addfer <- tibble(Cohort = c("FINDONOR","THL"),
+       ferdif = c(bdmed,gpmed)
+       )
+
+regression_data_pre_NL <- regression_data_pre %>%
+  right_join(addfer,by=c("Cohort"="Cohort")) %>% 
+  mutate(log_ferritin = log(exp(log_ferritin) + exp(ferdif)))
+  
+  
+regression_data_pre_NL %>% 
+  group_by(Cohort) %>% 
+  summarise(
+    med_fer = exp(median(log_ferritin))
+    )
+
+```
+
+
+```{r}
+
+tmp <- bind_cols( 
+  regression_data_pre %>% select(log_ferritin) %>% rename(original = log_ferritin),
+    regression_data_pre_NL %>% select(log_ferritin, Cohort) %>% rename(like_dutch_men = log_ferritin),
+  )
+
+p <- ggplot(tmp)
+p <- p + geom_point(aes(y=exp(like_dutch_men),x=exp(original),color=Cohort))
+p
+```
+
+
+
+```{r}
+tmp <- bind_rows(
+  regression_data_pre %>% select(Cohort,log_ferritin) %>%  mutate(set="original"),
+  regression_data_pre_NL %>% select(Cohort,log_ferritin) %>% mutate(set="like_dutch_men")
+)
+
+p <- ggplot(data=tmp)
+p <- p +  geom_histogram(aes(x=log_ferritin),alpha=0.5,binwidth = 0.1)
+p <- p + facet_grid(set~Cohort)
+p
+```
+
+
+```{r  pre_nl}
+# premenopausal women
+
+linear_pre_NL <- lm(log_ferritin ~ 
+                      Age + 
+                        donation_count_2 + 
+                        donation_count +
+                        log_last_donation + 
+                        Cohort +
+                        blood_vol,
+                      data = regression_data_pre_NL,
+  )
+
+summary(linear_pre_NL)
+
+
+```
+
+
+
+```{r}
+confint(linear_pre_NL)
+```
+
+```{r}
+confint(linear_pre)
+```
+
+## Forest plot 
+
+
+```{r}
+regressor_values <- c(
+ "Age" = "Age (5 years)",
+   "log_last_donation" = "Days since last donation (log, /log(2))",
+    "donation_count_2" = "Donations in last 2 years (quadratic)",
+    "donation_count" = "Donations in last 2 years",
+    "CohortTHL" = "General population"
+)
+
+
+intervals_pre <- bind_cols(
+  regressor= rownames(confint(linear_pre)),
+  confint(linear_pre),
+  m=summary(linear_pre)$coefficients[,"Estimate"],
+  set = "original"
+  ) %>% 
+  rename(ll = `2.5 %`,hh=`97.5 %`)
+
+
+intervals_pre_NL <- bind_cols(
+  regressor= rownames(confint(linear_pre_NL)),
+  confint(linear_pre_NL),
+  m=summary(linear_pre_NL)$coefficients[,"Estimate"],
+  set = "like_dutch_men"
+  ) %>% 
+  rename(ll = `2.5 %`,hh=`97.5 %`)
+
+intervals_combined <- bind_rows(intervals_pre,intervals_pre_NL) %>% 
+  filter(! (regressor == '(Intercept)' )) %>% 
+  mutate(regressor = plyr::revalue(regressor, regressor_values)) 
+
+
+```
+
+
+
+
+```{r , fig1, fig.height = 10, fig.width = 15 ,warning=FALSE}
+
+orlower <- -1
+orupper <- 1
+
+# Truncate ORs for plotting
+plotdata <- intervals_combined %>% 
+  mutate(
+    ll = case_when(
+      ll < orlower ~ orlower,
+      TRUE ~ ll
+    ),
+    hh = case_when(
+      hh > orupper ~ orupper,
+      TRUE ~ hh
+    )
+  ) %>% mutate(is.sig = ll < 0 & hh < 0 | ll > 0 & hh > 0)
+
+#theme_set(bayesplot::theme_default())
+pos <- position_nudge(y=as.numeric(as.factor(plotdata$set))/5 -0.1) 
+
+p <- ggplot(plotdata, aes(x = m, y = regressor, color = set)) + 
+  geom_point(position = pos,
+             aes(shape = is.sig), 
+             size=4) +
+  geom_linerange(aes(xmin = ll, xmax = hh), 
+                 position = pos,
+                 size = 1, 
+                 linetype = 1
+                  ) +
+  # scale_color_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
+  #                    limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
+  # scale_fill_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
+  #                   limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
+  scale_shape_manual(values = c(1,16)) +
+  xlim(orlower,orupper)  +   
+  geom_vline(xintercept = 0 , color = "grey", linetype = "dotted",
+             size = 1) +
+  theme(axis.title = element_text(size = 14),
+        strip.text =  element_text(size = 14),
+        legend.text = element_text(size = 12),
+        strip.background = element_rect(fill = "white"),
+        strip.background.x = element_blank(),
+        axis.text.x = element_text(size = 14),
+        axis.text.y = element_text(size = 14)
+  ) +
+  guides(shape = "none") +
+  theme_classic() +
+  xlab("Coefficient") +
+  theme(text = element_text(size = 20)) +
+  theme(axis.title.y = element_blank())
+
+p
+
+```
+
+
+
+#  Test the effect of changing the median of the cohorts across different values
+
+
+```{r}
+
+max_med_fer <- gpmed
+min_med_fer <- 0
+length.out <- 20
+
+# Generate length.out equally spaced values for each variable
+values_var1 <- seq(min_med_fer, max_med_fer, length.out = length.out)
+values_var2 <- seq(min_med_fer, max_med_fer, length.out = length.out)
+
+# Create a grid of all combinations of these values
+INPUT <- expand.grid(donor = values_var1, gp = values_var2)
+
+data <- regression_data_pre
+
+simres <- INPUT %>% 
+  mutate(
+    newdata = map2(donor,gp, ~ {
+      data %>%
+        mutate(
+          log_ferritin = case_when(
+            Cohort == "FINDONOR" ~ log(exp(log_ferritin) + exp(.x)),
+            Cohort == "THL" ~ log(exp(log_ferritin) + exp(.y))
+          )
+        )
+    }
+    )
+  )
+   
+
+fermodel <- function(df) {
+  lm(log_ferritin ~   Age + 
+       donation_count_2 + 
+       donation_count +
+       log_last_donation + 
+       Cohort +
+       blood_vol,
+     data = df)
+}
+
+simres <- simres %>% 
+  mutate(
+    newmodel = map(newdata, fermodel)
+  )
+  
+tidy_coef <- function(x) {
+  tidy(x,conf.int = TRUE)
+}
+
+simres <- simres %>%  
+  mutate(
+    # Use tidy to extract coefficients and confidence intervals
+    coefficients = map(newmodel, tidy_coef),
+    # Unnest the coefficients column
+    coefficients = map(coefficients, ~ select(.x, term, estimate, conf.low, conf.high)),
+    # Separate coefficients into columns
+    estimate = map_dbl(coefficients, ~ filter(.x, term == "CohortTHL")$estimate),
+    conf_low = map_dbl(coefficients, ~ filter(.x, term == "CohortTHL")$conf.low),
+    conf_high = map_dbl(coefficients, ~ filter(.x, term == "CohortTHL")$conf.high)
+  )
+  
+head(simres)
+```
+
+```{r}
+tail(simres)
+```
+
+
+```{r}
+
+
+med_fer <- data %>% 
+  group_by(Cohort) %>% 
+  mutate(ferritin = exp(log_ferritin)) %>% 
+  summarise(med_fer = median(ferritin))
+med_fer
+```
+
+
+
+```{r}
+
+p <- ggplot(simres)
+p <- p + geom_point(
+  aes(y=exp(gp) +  med_fer$med_fer[2] ,
+      x=exp(donor) +  med_fer$med_fer[1],
+      color=estimate))
+
+p <- p + scale_x_log10() + scale_y_log10()
+p <- p + scale_color_gradient2(low="red",high = "blue",midpoint=0,mid="yellow")
+p <- p + xlab("Donor cohort i.e. reference median ferritin (ng/l)") + ylab("General population cohort median ferritin (ng/l)")
+p <- p + theme_bw()
+
+p
+
+
+```
+
+
+
+```{r}
+
+p <- ggplot()
+p <- p + geom_point(
+  aes(y=estimate, 
+      x=exp(donor) +  med_fer$med_fer[1],
+      color=exp(gp) +  med_fer$med_fer[2]),data=simres)
+p <- p + xlab("Donor cohort i.e. reference median ferritin (ng/l)") + ylab("General population coefficient estimate")
+p <- p + scale_colour_continuous(name="General population\ncohort median\nferritin (ng/l)")
+p <- p + geom_text(aes(x = 26,  y =plotdata$m[5],label="original"),col="red")
+p <- p + geom_text(aes(x = 55,  y =plotdata$m[11],label="like_dutch_men"),col="red")
+p <- p + geom_point(aes(x = 26,  y =plotdata$m[5]),col="red")
+p <- p + geom_point(aes(x = 55,  y =plotdata$m[11]),col="red")
+
+p
+
+```
+
