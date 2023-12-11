@@ -257,3 +257,48 @@ p
 ggplot2::ggsave("../results/figures/donation_history.png",device = "png", height = 12, width = 11, units = "cm" )
 
 ```
+
+# Ferrin and donation history
+
+```{r}
+
+
+p <- ggplot(summary_all_cohorts)
+p <- p + geom_point(aes(x=TwoYearsFromStartCount_FB, y=Ferritin,),alpha=0.5)
+p <- p + geom_smooth(aes(x=TwoYearsFromStartCount_FB, y=Ferritin),data=summary_all_cohorts,col="green",method = "lm")
+p <- p + scale_y_log10()
+p <- p + facet_grid(Group~Cohort)
+p <- p + geom_hline(yintercept =15, col="red",linetype=2) 
+p <- p + geom_text(aes(x=0.01,y=15,label='15'))
+p <- p + theme(axis.text.x=element_text(angle=90, hjust=1))
+p <- p + geom_smooth(aes(x=CRP, y=Ferritin), col="black",alpha=0.5)
+p <- p + xlab("Nb of donations in last two years") + ylab("Ferritiini ug/l")
+p
+
+
+
+
+```
+
+
+
+```{r}
+
+
+p <- ggplot(summary_all_cohorts)
+p <- p + geom_point(aes(x=DaysToPreviousFB, y=Ferritin,),alpha=0.5)
+p <- p + geom_smooth(aes(x=DaysToPreviousFB, y=Ferritin),data=summary_all_cohorts,col="green",method = "lm")
+p <- p + scale_y_log10() + scale_x_log10()
+p <- p + facet_grid(Group~Cohort)
+p <- p + geom_hline(yintercept =15, col="red",linetype=2) 
+p <- p + geom_text(aes(x=0.01,y=15,label='15'))
+p <- p + theme(axis.text.x=element_text(angle=90, hjust=1))
+p <- p + xlab("Nb of donations in last two years") + ylab("Ferritiini ug/l")
+p
+
+
+
+
+```
+
+
