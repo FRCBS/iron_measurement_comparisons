@@ -775,3 +775,14 @@ p <- p + geom_point(aes(x = 55,  y =plotdata_wnd$m[13]),col="red")
 p
 
 ```
+
+
+# Manipulate donation histories
+
+
+```{r}
+
+
+
+```
+
