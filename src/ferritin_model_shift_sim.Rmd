@@ -203,10 +203,15 @@ tmp <- bind_rows(
   regression_data_pre %>% select(Cohort,log_ferritin) %>%  mutate(set="original"),
   regression_data_pre_NL %>% select(Cohort,log_ferritin) %>% mutate(set="like_dutch_men")
 )
+tmp_sum <- tmp %>%  group_by(Cohort,set) %>% 
+  summarise(
+    median = median(log_ferritin)
+  )
 
 p <- ggplot(data=tmp)
 p <- p +  geom_histogram(aes(x=log_ferritin),alpha=0.5,binwidth = 0.1)
-p <- p + facet_grid(set~Cohort)
+p <- p + geom_vline(data=tmp_sum,aes(xintercept=median))
+p <- p + facet_grid(Cohort~set)
 p
 ```
 
