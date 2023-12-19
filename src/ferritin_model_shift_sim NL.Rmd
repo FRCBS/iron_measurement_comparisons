@@ -185,8 +185,8 @@ regression_data_men_as_fi %>%
 ```{r}
 
 tmp <- bind_cols( 
-  regression_data_men_nl %>% select(log_ferritin) %>% rename(original = log_ferritin),
-    regression_data_men_as_fi %>% select(log_ferritin, Cohort) %>% rename(like_dutch_men = log_ferritin),
+  regression_data_men_nl %>% dplyr::select(log_ferritin) %>% rename(original = log_ferritin),
+    regression_data_men_as_fi %>% dplyr::select(log_ferritin, Cohort) %>% rename(like_dutch_men = log_ferritin),
   )
 
 p <- ggplot(tmp)
@@ -198,8 +198,8 @@ p
 
 ```{r}
 tmp <- bind_rows(
-  regression_data_men_nl %>% select(Cohort,log_ferritin) %>%  mutate(set="original"),
-  regression_data_men_as_fi %>% select(Cohort,log_ferritin) %>% mutate(set="like_finn_pre")
+  regression_data_men_nl %>% select(Cohort,log_ferritin,donation_count,log_last_donation) %>%  mutate(set="original"),
+  regression_data_men_as_fi %>% select(Cohort,log_ferritin,donation_count,log_last_donation) %>% mutate(set="like_finn_pre")
 )
 
 tmp_sum <- tmp %>%  group_by(Cohort,set) %>% 
@@ -213,6 +213,37 @@ p <- p + geom_vline(data=tmp_sum,aes(xintercept=median))
 p <- p + facet_grid(Cohort~set)
 p
 ```
+
+
+```{r}
+
+p <- ggplot(aes(x=donation_count, y=log_ferritin),data=tmp) +
+  geom_jitter(alpha = 0.25, width = 0.2, size = 0.2, height = 0, shape = 1) +
+  geom_boxplot(aes(group = donation_count), alpha = 0,
+               width = 0.4,
+               outlier.alpha = 0) +
+  facet_grid(Cohort~set) +
+  geom_smooth(method = "lm") +
+  geom_smooth()
+p
+
+```
+
+
+```{r}
+
+p <- ggplot(aes(x=log_last_donation, y=log_ferritin),data=tmp) +
+  geom_jitter(alpha = 0.25, width = 0.2, size = 0.2, height = 0, shape = 1) +
+  geom_boxplot(aes(group = donation_count), alpha = 0,
+               width = 0.4,
+               outlier.alpha = 0) +
+  facet_grid(Cohort~set) +
+  geom_smooth(method = "lm") +
+  geom_smooth()
+p
+
+```
+
 
 # Forest plot with new donors 
 
@@ -783,6 +814,177 @@ p
 ```{r}
 
 
+tmp <- regression_cohorts %>% filter(Cohort == "FINDONOR")
+
+plt_1 <- tmp %>%
+  dplyr::select(ID, Group, Ferritin, 
+         donation_count) %>% 
+  ggplot(aes(x=donation_count, y=Ferritin)) +
+  geom_jitter(aes(color = Group), alpha = 0.25, width = 0.2, size = 0.2, height = 0, shape = 1) +
+  geom_boxplot(aes(color = Group, group = donation_count), alpha = 0,
+               width = 0.4,
+               outlier.alpha = 0) +
+  facet_grid(Group~.) +
+  scale_color_manual(values = c( "#ff85a2",  "#de2d26","#00BFFF" ),
+  #                   limits = c("Pre-menopausal women", "Post-menopausal women","Men" )) +
+                    limits = c("Pre_menopause_women", "Post_menopause_women", "Men")) +
+  theme_bw() +
+  theme(legend.position = "none", 
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+       panel.border = element_rect(colour = NA),
+        strip.background=element_blank(),
+        strip.text = element_blank(),
+        axis.line = element_line(colour="black"),
+        axis.title.x = element_text(size = 8),
+        axis.title.y =element_text(size = 8),
+        axis.text = element_text(size = 8)) +
+  scale_y_log10(breaks=c(5, 15,25,50,100)) +
+  scale_x_continuous(breaks=c(0, 2, 4,6,8, 10, 12)) +
+  xlab("Nb of donations (2 years)") +
+  ylab(expression("Ferritin ("*mu* "g/l)")) +
+  geom_smooth(method = "lm") +
+  geom_smooth()
+
+plt_2 <-tmp %>%
+  dplyr::select(ID, Group, Ferritin, 
+         last_donation) %>% 
+ ggplot(aes(x=last_donation, y=Ferritin)) +
+   geom_point(aes(color = Group), alpha = 0.4,  size = 0.7, shape =1) +
+  facet_grid(Group~., 
+      labeller = label_wrap_gen(width = 2, multi_line = TRUE))  +
+  scale_color_manual(values = c( "#ff85a2",  "#de2d26","#00BFFF" ),
+#                     limits = c("Pre-menopausal women", "Post_menopausal women","Men" )) +
+limits = c("Pre_menopause_women", "Post_menopause_women", "Men")) +
+  theme_bw() +
+  theme(legend.position = "none", 
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.border = element_rect(colour = NA),
+        strip.background=element_rect(colour="white",fill="white"),
+        strip.text = element_text(face="bold", size = 10),
+        axis.line = element_line(colour="black"),
+        axis.title.x = element_text(size = 8),
+        axis.title.y = element_blank(),
+        axis.text = element_text(size = 8)) +
+  scale_y_log10(breaks=c(5, 15,25,50,100)) +
+  scale_x_log10(breaks=c(60, 90,180,360,1000)) +
+  xlab("Days since last donation") +
+  ylab("") +
+  geom_smooth(method = "lm") +
+  geom_smooth()
+
+
+
+
+
+```
+
+
+```{r}
+
+
+tmp <- regression_cohorts %>% filter(Cohort == "FINDONOR") %>% 
+  mutate(
+    donation_count = donation_count/0.5,
+    last_donation = last_donation*0.5
+    )
+
+plt_3 <- tmp %>%
+  dplyr::select(ID, Group, Ferritin, 
+         donation_count) %>% 
+  ggplot(aes(x=donation_count, y=Ferritin)) +
+  geom_jitter(aes(color = Group), alpha = 0.25, width = 0.2, size = 0.2, height = 0, shape = 1) +
+  geom_boxplot(aes(color = Group, group = donation_count), alpha = 0,
+               width = 0.4,
+               outlier.alpha = 0) +
+  facet_grid(Group~.) +
+  scale_color_manual(values = c( "#ff85a2",  "#de2d26","#00BFFF" ),
+  #                   limits = c("Pre-menopausal women", "Post-menopausal women","Men" )) +
+                    limits = c("Pre_menopause_women", "Post_menopause_women", "Men")) +
+  theme_bw() +
+  theme(legend.position = "none", 
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+       panel.border = element_rect(colour = NA),
+        strip.background=element_blank(),
+        strip.text = element_blank(),
+        axis.line = element_line(colour="black"),
+        axis.title.x = element_text(size = 8),
+        axis.title.y =element_text(size = 8),
+        axis.text = element_text(size = 8)) +
+  scale_y_log10(breaks=c(5, 15,25,50,100)) +
+  scale_x_continuous(breaks=c(0, 2, 4,6,8, 10, 12)) +
+  xlab("Nb of donations (2 years)") +
+  ylab(expression("Ferritin ("*mu* "g/l)")) +
+  geom_smooth(method = "lm") +
+  geom_smooth()
+
+plt_4 <-tmp %>%
+  dplyr::select(ID, Group, Ferritin, 
+         last_donation) %>% 
+ ggplot(aes(x=last_donation, y=Ferritin)) +
+   geom_point(aes(color = Group), alpha = 0.4,  size = 0.7, shape =1) +
+  facet_grid(Group~., 
+      labeller = label_wrap_gen(width = 2, multi_line = TRUE))  +
+  scale_color_manual(values = c( "#ff85a2",  "#de2d26","#00BFFF" ),
+#                     limits = c("Pre-menopausal women", "Post_menopausal women","Men" )) +
+limits = c("Pre_menopause_women", "Post_menopause_women", "Men")) +
+  theme_bw() +
+  theme(legend.position = "none", 
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.border = element_rect(colour = NA),
+        strip.background=element_rect(colour="white",fill="white"),
+        strip.text = element_text(face="bold", size = 10),
+        axis.line = element_line(colour="black"),
+        axis.title.x = element_text(size = 8),
+        axis.title.y = element_blank(),
+        axis.text = element_text(size = 8)) +
+  scale_y_log10(breaks=c(5, 15,25,50,100)) +
+  scale_x_log10(breaks=c(60, 90,180,360,1000)) +
+  xlab("Days since last donation") +
+  ylab("") +
+  geom_smooth(method = "lm") +
+  geom_smooth()
+
+
+plta <- cowplot::plot_grid(plt_1,plt_3, plt_2,plt_4,  ncol = 2,nrow=2)
+
+plta
+
+
+
+```
+
+
+
+
+
+
+```{r}
+set.seed(123)
+
+# Number of data points
+n <- 100
+
+# Generating x values
+x <- runif(n, -10, 10)  # Generating random x values between -10 and 10
+
+# Creating an empty plot to add scatter plots with varying slopes
+plot(NA, NA, xlim = c(-10, 10), ylim = c(-20, 20), xlab = "X", ylab = "Y", main = "Scatter plots with varying slopes")
+
+# Varying slopes from -1 to 1
+for (slope in seq(-1, 1, by = 0.2)) {
+  # Computing y values based on the varying slope
+  y <- slope * x + rnorm(n, 0, 5)  # Simulating y values with noise
+  
+  # Plotting scatter plot with varying slopes
+  points(x, y, col = rainbow(length(seq(-1, 1, by = 0.2)))[which(seq(-1, 1, by = 0.2) == slope)], pch = 16)
+}
+
+# Adding a legend for different slopes
+legend("topleft", legend = seq(-1, 1, by = 0.2), col = rainbow(length(seq(-1, 1, by = 0.2))), pch = 16, title = "Slope")
 
 ```
 
