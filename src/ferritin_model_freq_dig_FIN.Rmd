@@ -1,0 +1,341 @@
+---
+title: "Ferritin model"
+author: "Mikko Arvas"
+date: "20.12.2023"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+# Summary
+
+
+```{r setup, , message = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(here)
+library(broom)
+library(gglm)
+library(gtable)
+library(grid)
+
+```
+
+
+
+
+# Data loading and preparation 
+
+Load data
+
+```{r}
+file<- here("data/ID_data_regression_cohorts_genpop_combined.rdata")
+load(file)
+all_cohorts <- regression_cohorts
+
+all_cohorts <- all_cohorts %>% 
+  filter(!is.na(CRP)) %>% 
+  filter(! CRP >= 30)
+
+```
+
+
+
+
+```{r}
+# men
+## menstruation and childbirth variables removed 
+regression_data_men <- all_cohorts %>% 
+  filter(Group == "Men") %>% 
+  dplyr::select(
+    log_ferritin, 
+    Cohort,
+    blood_vol,
+    Age,
+    donation_count, 
+    log_last_donation,
+    Smoking
+    ) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         blood_vol = scale(blood_vol, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2) %>% 
+  relocate(Smoking, .after=donation_count_2)
+
+# premenopausal women
+regression_data_pre <- all_cohorts %>% 
+  filter(Group == "Pre_menopause_women") %>% 
+  dplyr::select(
+    log_ferritin, 
+    Cohort,
+    blood_vol,
+    Age, 
+    donation_count, 
+    log_last_donation,
+    Smoking,
+    Menstruation, 
+    PreviousChildbirth, 
+    HormonalContraception
+    ) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+        donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         blood_vol = scale(blood_vol, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2) %>% 
+ relocate(donation_count_2, .after=log_last_donation)
+
+# postmenopausal women 
+## menstruation variable removed 
+regression_data_post <- all_cohorts %>% 
+  filter(Group == "Post_menopause_women") %>% 
+  dplyr::select(
+    log_ferritin, 
+    Cohort,
+    blood_vol,
+    Age, 
+    donation_count, 
+    log_last_donation,
+    Smoking,
+    Menstruation, 
+    PreviousChildbirth, 
+    HormonalContraception
+    ) %>%
+  mutate(Age = scale(Age, scale = FALSE)[,1],
+         donation_count = scale(donation_count, scale = FALSE)[,1],
+         log_last_donation = scale(log_last_donation, scale = FALSE)[,1],
+         blood_vol = scale(blood_vol, scale = FALSE)[,1],
+         donation_count_2 = donation_count^2) %>% 
+  relocate(donation_count_2, .after=log_last_donation)
+
+
+```
+
+## Models 
+
+```{r}
+
+fit_models <- function(data) {
+  sums <- tibble()
+  mods <- list()
+  mnames <- vector()
+  for (i in 1:(ncol(data) - 1)) { # Assuming 'y' is the first column
+    mname  <- paste("M", i,sep="")
+    variables <- names(data)[2:(i + 1)] # Selecting variables up to i
+    modelformula <- paste("log_ferritin ~", paste(variables, collapse = " + ")) 
+    # Fit the linear model
+    lm_model <- lm(modelformula, data = data)
+    
+    # Extract model summary using broom's tidy function
+    model_summary <- tidy(lm_model,conf.int = TRUE)
+    
+    # Add information about the model and coefficients to the results data frame
+    sums <- bind_rows(
+      sums, 
+      mutate(model_summary, 
+             Model = mname,
+             formula = modelformula
+      )
+    )
+    mods <- c(mods,list(lm_model))
+    mnames <- c(mnames,mname)
+   
+  }
+   names(mods) <- mnames
+  invisible(list(sums=sums,mods=mods))
+}
+
+```
+
+
+```{r}
+results_men <- fit_models(regression_data_men)
+results_post <- fit_models(regression_data_post)
+results_pre <- fit_models(regression_data_pre)
+```
+
+
+# Plots diagnosis
+
+
+```{r}
+
+plot_models <- function(model_list,color=NULL){
+  cat(length(model_list),"\n")
+  alpha <- 0.2
+  qqps <- list()
+  frps <- list()
+  slps <- list()
+  rlps <- list()
+  for(i in names(model_list)) {
+    qq <- ggplotGrob(ggplot(
+      model_list[[i]],
+      if (is.null(color)) {
+        aes(color= NULL)
+      } else {
+        aes(color= .data[[color]])
+      }
+      
+    ) + 
+      stat_normal_qq(alpha = alpha) + 
+    theme(legend.position = "none")
+    )
+  fr <- ggplotGrob(ggplot(
+    model_list[[i]],
+     if (is.null(color)) {
+        aes(color= NULL)
+      } else {
+        aes(color= .data[[color]])
+      }
+  ) + 
+    stat_fitted_resid(alpha = alpha) + 
+    theme(legend.position = "none")
+  )
+  sl <- ggplotGrob(ggplot(
+    model_list[[i]],
+     if (is.null(color)) {
+        aes(color= NULL)
+      } else {
+        aes(color= .data[[color]])
+      }
+  ) + 
+    stat_scale_location(alpha = alpha) + 
+    theme(legend.position = "none")
+  )
+  rl <- ggplotGrob(ggplot(
+    model_list[[i]],
+     if (is.null(color)) {
+        aes(color= NULL)
+      } else {
+        aes(color= .data[[color]])
+      }
+  ) + 
+    stat_resid_leverage(alpha = alpha) + 
+    theme(legend.position = "none")
+  )
+  qqps <- c(qqps,list(qq))
+  frps <- c(frps,list(fr))
+  slps <- c(slps,list(sl))
+  rlps <- c(rlps,list(rl))
+} 
+
+    
+  mat <- matrix(c(frps,qqps,slps,rlps),ncol=4)
+  cat(dim(mat),"\n")
+  mat <- gtable_matrix("diags",
+                       mat,
+                       widths = unit(c(2, 2,2,2),"inches"),
+                heights=unit(rep(2,length(model_list)),"inches")
+  )
+  mat
+}
+
+
+```
+
+
+
+## Men
+
+
+```{r , warning=FALSE,message=FALSE}
+pmen <- plot_models(results_men$mods)
+#pmen
+```
+
+
+```{r  fig.width = 8, fig.height = 14}
+
+grid.newpage()
+grid.draw(pmen)
+```
+
+
+
+```{r , warning=FALSE,message=FALSE}
+pmen <- plot_models(results_men$mods,color="Cohort")
+#pmen
+```
+
+
+```{r  fig.width = 8, fig.height = 14}
+
+grid.newpage()
+grid.draw(pmen)
+```
+
+## Post
+
+```{r , warning=FALSE,message=FALSE}
+ppost <- plot_models(results_post$mods)
+```
+
+
+```{r  fig.width = 8, fig.height = 20}
+
+grid.newpage()
+grid.draw(ppost)
+```
+
+```{r , warning=FALSE,message=FALSE}
+ppost <- plot_models(results_post$mods,color="Cohort")
+```
+
+
+```{r  fig.width = 8, fig.height = 20}
+
+grid.newpage()
+grid.draw(ppost)
+```
+
+## Pre
+
+```{r , warning=FALSE,message=FALSE}
+ppre <- plot_models(results_pre$mods)
+```
+
+
+```{r  fig.width = 8, fig.height = 20}
+
+grid.newpage()
+grid.draw(ppre)
+```
+
+```{r , warning=FALSE,message=FALSE}
+ppre <- plot_models(results_pre$mods,color="Cohort")
+```
+
+
+```{r  fig.width = 8, fig.height = 20}
+
+grid.newpage()
+grid.draw(ppre)
+```
+
+
+```{r , warning=FALSE,message=FALSE}
+#ppre <- plot_models(list(M4=results_pre$mods$M4,M5=results_pre$mods$M5),color="donation_count")
+#grid.newpage()
+#grid.draw(ppre)
+# Warning messages:
+# 1: The following aesthetics were dropped during statistical transformation: colour
+# ℹ This can happen when ggplot fails to infer the correct grouping structure in the data.
+#ℹ Did you forget to specify a `group` aesthetic or to convert a numerical variable into a factor? 
+```
+
+
+
+
+# Plot coefficients
+
+
+```{r}
+
+
+
+
+```
+
