@@ -32,13 +32,19 @@ library(grid)
 Load data
 
 ```{r}
-file<- here("data/ID_data_regression_cohorts_genpop_combined.rdata")
-load(file)
-all_cohorts <- regression_cohorts
 
-all_cohorts <- all_cohorts %>% 
+is.fin <- TRUE
+
+
+if(is.fin) {
+  file<- here("data/ID_data_regression_cohorts_genpop_combined.rdata")
+  load(file)
+  all_cohorts <- regression_cohorts
+  all_cohorts <- all_cohorts %>% 
   filter(!is.na(CRP)) %>% 
   filter(! CRP >= 30)
+
+}
 
 ```
 
@@ -123,7 +129,7 @@ fit_models <- function(data) {
   mods <- list()
   mnames <- vector()
   for (i in 1:(ncol(data) - 1)) { # Assuming 'y' is the first column
-    mname  <- paste("M", i,sep="")
+    mname  <- paste("M", str_pad(string = i,width = 2,pad = 0),sep="")
     variables <- names(data)[2:(i + 1)] # Selecting variables up to i
     modelformula <- paste("log_ferritin ~", paste(variables, collapse = " + ")) 
     # Fit the linear model
@@ -164,7 +170,7 @@ results_pre <- fit_models(regression_data_pre)
 ```{r}
 
 plot_models <- function(model_list,color=NULL){
-  cat(length(model_list),"\n")
+  #cat(length(model_list),"\n")
   alpha <- 0.2
   qqps <- list()
   frps <- list()
@@ -224,7 +230,7 @@ plot_models <- function(model_list,color=NULL){
 
     
   mat <- matrix(c(frps,qqps,slps,rlps),ncol=4)
-  cat(dim(mat),"\n")
+  #cat(dim(mat),"\n")
   mat <- gtable_matrix("diags",
                        mat,
                        widths = unit(c(2, 2,2,2),"inches"),
@@ -324,6 +330,8 @@ grid.draw(ppre)
 # 1: The following aesthetics were dropped during statistical transformation: colour
 # ℹ This can happen when ggplot fails to infer the correct grouping structure in the data.
 #ℹ Did you forget to specify a `group` aesthetic or to convert a numerical variable into a factor? 
+
+#this need a a bit of thinking if it is really needed
 ```
 
 
@@ -334,7 +342,100 @@ grid.draw(ppre)
 
 ```{r}
 
+regressor_values <- c(
+ "Age" = "Age",
+     "log_last_donation" = "Days since last blood donation (log transformed)",
+   "Smokingyes" ="Smoking",
+    "donation_count_2" = "Number of blood donations (quadratic)",
+    "MenstruationYes" = "Menstruation",
+ "HormonalContraceptionyes" = "Hormonal contraception",
+    "PreviousChildbirthyes" = "Childbirth in the past",
+    "donation_count" = "Number of blood donations",
+  #  "CohortHEALTH00" = "Cohort (Health 2000)",
+  #  "CohortFINRISK97" = "Cohort (FinRisk 1997)",
+ "CohortTHL" = "General population",
+    "blood_vol" = "Blood volume"
+)
 
+lower <- -1
+upper <- 1
+
+
+makeplotdata <- function(sumtable,group='Pre-menopausal women') {
+  sumtable %>% 
+    mutate(Group=group) %>% 
+    rename(
+      m = estimate,
+      ll = conf.low,
+      ul = conf.high,
+      parameter = term
+      ) %>% 
+    mutate(
+    ll = case_when(
+      ll < lower ~ lower,
+      TRUE ~ ll
+    ),
+    ul = case_when(
+      ul > upper ~ upper,
+      TRUE ~ ul
+    )
+  ) %>% mutate(is.sig = ll < 0 & ul < 0 | ll > 0 & ul > 0) %>% 
+    filter(! parameter == "(Intercept)") %>% 
+   mutate(regressor = plyr::revalue(parameter, regressor_values)) %>%
+     select(-parameter) 
+    
+}
+
+plotdata <- bind_rows(
+makeplotdata(results_pre$sums,group='Pre-menopausal women'),
+makeplotdata(results_post$sums,group='Post-menopausal women'),
+makeplotdata(results_men$sums,group='Men'),
+)
+```
+```{r fig.width = 8, fig.height = 10}
+
+
+# Color definition 
+color_mapping <- c(  "General population" = "#0000FF",  "New blood donor" = "#008000",  "Age" = "#FFA500",    "Blood volume" = "#FFA500",    "Number of blood donations" = "#FF0000",    "Number of blood donations (quadratic)" = "#FF0000",  
+  "Days since last blood donation (log transformed)" = "#FF0000",    "Smoking" = "#800080",    "Childbirth in the past" = "#800080",   "Menstruation" = "#800080",  "Hormonal contraception" = "#800080")
+
+pos <- position_nudge(y=as.numeric(as.factor(plotdata$Group))/5 -0.1) 
+
+p <- ggplot(plotdata, aes(x = m, y = regressor,color=regressor)) + 
+  geom_point(position = pos,
+             aes(shape = is.sig), 
+             size=2) +
+  geom_linerange(aes(xmin = ll, xmax = ul), 
+                 position = pos,
+                 size = 0.8, 
+                 linetype = 1
+                 ) +
+  #scale_color_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
+  #                   limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
+  #scale_fill_manual(values = c(  "#0065BD", "#BA0303", "#C50084" ),
+  #                  limits = c("Men",  "Post-menopausal women","Pre-menopausal women" )) +
+  scale_shape_manual(values = c(1,16)) +
+  xlim(lower,upper)  +   
+  geom_vline(xintercept = 0 , color = "grey", linetype = "dotted",
+             size = 1) +
+  theme(axis.title = element_text(size = 14),
+        strip.text =  element_text(size = 14),
+        legend.text = element_text(size = 12),
+        strip.background = element_rect(fill = "white"),
+        strip.background.x = element_blank(),
+        axis.text.x = element_text(size = 14),
+        axis.text.y = element_text(size = 10)
+  ) +
+  guides(shape = "none") +
+  theme_classic() +
+  xlab("Coefficient") +
+  theme(text = element_text(size = 10)) +
+  theme(axis.title.y = element_blank()) +
+  facet_grid(Model~ Group,scales = "free_y",space = "free_y") +
+  theme(legend.position = "none") +
+  scale_color_manual(values = c(color_mapping)) 
+
+p
 
 
 ```
