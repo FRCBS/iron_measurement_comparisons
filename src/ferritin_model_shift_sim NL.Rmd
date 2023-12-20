@@ -656,22 +656,26 @@ tmp <- pivot_longer(
       name == "GPestimate" ~ "THL",
       name == "NDestimate" ~ "NEWDONOR"
     )
-  ) %>% inner_join(med_fer,by=c("Cohort" = "Cohort") )
+  ) %>% inner_join(med_fer,by=c("Cohort" = "Cohort") )%>% 
+  mutate(
+        CohMedDif = (gp  * medianfer)  - (donor * med_fer$medianfer[1])
+  )
 
 p <- ggplot(tmp)
 p <- p + geom_point(
   aes(y=value, 
-      x=donor * med_fer$medianfer[1],
-      color=gp  * medianfer 
+      x=CohMedDif,
+      color=donor * med_fer$medianfer[1]
       ),data=tmp
       
   )
-p <- p + xlab("Donor cohort i.e. reference median ferritin (ng/l)") + ylab("General population coefficient estimate")
-p <- p + scale_colour_continuous(name="Other \ncohort median\nferritin (ng/l)")
-p <- p + geom_text(aes(x = 26,  y =plotdata_wnd$m[6],label="as_pre_fi_pg"),col="red")
-p <- p + geom_text(aes(x = 55,  y =plotdata_wnd$m[13],label="original_gp"),col="red")
-p <- p + geom_point(aes(x = 26,  y =plotdata_wnd$m[6]),col="red")
-p <- p + geom_point(aes(x = 55,  y =plotdata_wnd$m[13]),col="red")
+p <- p + xlab("Genpop - donor median ferritin (ng/l)") + ylab("General population coefficient estimate")
+#p <- p + xlab("Donor cohort i.e. reference median ferritin (ng/l)") + ylab("General population coefficient estimate")
+p <- p + scale_colour_continuous(name="Donor \ncohort median\nferritin (ng/l)")
+#p <- p + geom_text(aes(x = 26,  y =plotdata_wnd$m[6],label="as_pre_fi_pg"),col="red")
+#p <- p + geom_text(aes(x = 55,  y =plotdata_wnd$m[13],label="original_gp"),col="red")
+#p <- p + geom_point(aes(x = 26,  y =plotdata_wnd$m[6]),col="red")
+#p <- p + geom_point(aes(x = 55,  y =plotdata_wnd$m[13]),col="red")
 p <- p + facet_grid(. ~ Cohort)
 p
 
@@ -785,25 +789,36 @@ tmp <- pivot_longer(
 ###Change the Cohort variable values to match NL###
     Cohort = case_when(
       name == "GPestimate" ~ "THL",
-     )
-  ) %>% inner_join(med_fer,by=c("Cohort" = "Cohort") )
+     ),
+  ) %>% inner_join(med_fer,by=c("Cohort" = "Cohort") ) %>% 
+  mutate(
+        CohMedDif = (gp  * medianfer)  - (donor * med_fer$medianfer[1])
+  )
 
 p <- ggplot(tmp)
 p <- p + geom_point(
   aes(y=value, 
-      x=donor * med_fer$medianfer[1],
-      color=gp  * medianfer 
+      x=CohMedDif,
+      color=donor * med_fer$medianfer[1]
       ),data=tmp
       
   )
-p <- p + xlab("Donor cohort i.e. reference median ferritin (ng/l)") + ylab("General population coefficient estimate")
-p <- p + scale_colour_continuous(name="General population\ncohort median\nferritin (ng/l)")
-p <- p + geom_text(aes(x = 26,  y =plotdata_wnd$m[6],label="as_pre_fi_pg"),col="red")
-p <- p + geom_text(aes(x = 55,  y =plotdata_wnd$m[13],label="original_gp"),col="red")
-p <- p + geom_point(aes(x = 26,  y =plotdata_wnd$m[6]),col="red")
-p <- p + geom_point(aes(x = 55,  y =plotdata_wnd$m[13]),col="red")
+p <- p + xlab("Genpop - donor median ferritin (ng/l)") + ylab("General population coefficient estimate")
+p <- p + scale_colour_continuous(name="Donor\ncohort median\nferritin (ng/l)")
+#these need rethinking
+#p <- p + geom_text(aes(x = 25.6 - 26,  y =plotdata_wnd$m[6],label="as_pre_fi_pg"),col="red")
+#p <- p + geom_text(aes(x = 55,  y =plotdata_wnd$m[13],label="original_gp"),col="red")
+#p <- p + geom_point(aes(x = 25.6 - 26,  y =plotdata_wnd$m[6]),col="red")
+#p <- p + geom_point(aes(x = 55,  y =plotdata_wnd$m[13]),col="red")
 #p <- p + facet_grid(. ~ Cohort)
 p
+
+```
+
+
+```{r}
+
+knitr::knit_exit()
 
 ```
 
@@ -812,7 +827,7 @@ p
 
 
 ```{r}
-
+#so far excluded
 
 tmp <- regression_cohorts %>% filter(Cohort == "FINDONOR")
 
