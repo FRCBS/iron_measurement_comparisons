@@ -672,10 +672,6 @@ p <- p + geom_point(
 p <- p + xlab("Genpop - donor median ferritin (ng/l)") + ylab("General population coefficient estimate")
 #p <- p + xlab("Donor cohort i.e. reference median ferritin (ng/l)") + ylab("General population coefficient estimate")
 p <- p + scale_colour_continuous(name="Donor \ncohort median\nferritin (ng/l)")
-#p <- p + geom_text(aes(x = 26,  y =plotdata_wnd$m[6],label="as_pre_fi_pg"),col="red")
-#p <- p + geom_text(aes(x = 55,  y =plotdata_wnd$m[13],label="original_gp"),col="red")
-#p <- p + geom_point(aes(x = 26,  y =plotdata_wnd$m[6]),col="red")
-#p <- p + geom_point(aes(x = 55,  y =plotdata_wnd$m[13]),col="red")
 p <- p + facet_grid(. ~ Cohort)
 p
 
@@ -805,12 +801,6 @@ p <- p + geom_point(
   )
 p <- p + xlab("Genpop - donor median ferritin (ng/l)") + ylab("General population coefficient estimate")
 p <- p + scale_colour_continuous(name="Donor\ncohort median\nferritin (ng/l)")
-#these need rethinking
-#p <- p + geom_text(aes(x = 25.6 - 26,  y =plotdata_wnd$m[6],label="as_pre_fi_pg"),col="red")
-#p <- p + geom_text(aes(x = 55,  y =plotdata_wnd$m[13],label="original_gp"),col="red")
-#p <- p + geom_point(aes(x = 25.6 - 26,  y =plotdata_wnd$m[6]),col="red")
-#p <- p + geom_point(aes(x = 55,  y =plotdata_wnd$m[13]),col="red")
-#p <- p + facet_grid(. ~ Cohort)
 p
 
 ```
