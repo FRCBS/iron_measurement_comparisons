@@ -42,7 +42,8 @@ if(is.fin) {
   all_cohorts <- regression_cohorts
   all_cohorts <- all_cohorts %>% 
   filter(!is.na(CRP)) %>% 
-  filter(! CRP >= 30)
+  filter(! CRP >= 30) %>% 
+     mutate_if(is.ordered, function(x){factor(x, ordered = FALSE)})
 
 }
 
@@ -246,6 +247,12 @@ plot_models <- function(model_list,color=NULL){
 
 ## Men
 
+Below on each row 4 diagnostic plots for each model. In each row one more predictor variable is added for the model. in this order:
+
+```{r}
+colnames(regression_data_pre %>% dplyr::select(-log_ferritin)) %>% as_tibble()
+```
+
 
 ```{r , warning=FALSE,message=FALSE}
 pmen <- plot_models(results_men$mods)
@@ -381,8 +388,8 @@ makeplotdata <- function(sumtable,group='Pre-menopausal women') {
     )
   ) %>% mutate(is.sig = ll < 0 & ul < 0 | ll > 0 & ul > 0) %>% 
     filter(! parameter == "(Intercept)") %>% 
-   mutate(regressor = plyr::revalue(parameter, regressor_values)) %>%
-     select(-parameter) 
+   mutate(parameter = plyr::revalue(parameter, regressor_values)) #%>%
+     #select(-parameter) 
     
 }
 
@@ -399,9 +406,15 @@ makeplotdata(results_men$sums,group='Men'),
 color_mapping <- c(  "General population" = "#0000FF",  "New blood donor" = "#008000",  "Age" = "#FFA500",    "Blood volume" = "#FFA500",    "Number of blood donations" = "#FF0000",    "Number of blood donations (quadratic)" = "#FF0000",  
   "Days since last blood donation (log transformed)" = "#FF0000",    "Smoking" = "#800080",    "Childbirth in the past" = "#800080",   "Menstruation" = "#800080",  "Hormonal contraception" = "#800080")
 
+
+
+desired_order_parameter <- c( "General population", "Age", "Blood volume", "Number of blood donations", "Number of blood donations (quadratic)", "Days since last blood donation (log transformed)","Smoking", "Childbirth in the past", "Menstruation", "Hormonal contraception")
+plotdata$parameter <- factor(plotdata$parameter, levels = rev(desired_order_parameter))
+
+
 pos <- position_nudge(y=as.numeric(as.factor(plotdata$Group))/5 -0.1) 
 
-p <- ggplot(plotdata, aes(x = m, y = regressor,color=regressor)) + 
+p <- ggplot(plotdata, aes(x = m, y = parameter,color=parameter)) + 
   geom_point(position = pos,
              aes(shape = is.sig), 
              size=2) +
