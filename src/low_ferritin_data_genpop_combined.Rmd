@@ -691,8 +691,8 @@ fr1997_summary_final <- fr1997_summary_final %>%
 
 #HEALTH2000
 
-h2000_summary_final <- h2000_summary_final %>%
-  mutate(Menstruation = ifelse(ID %in% older_h2000, "no_period", as.character(Menstruation)))
+# h2000_summary_final <- h2000_summary_final %>%
+#   mutate(Menstruation = ifelse(ID %in% older_h2000, "no_period", as.character(Menstruation)))
 
 h2000_nb_women_no_menstruation_response <- h2000_summary_final %>% filter(Sex == "Women" & is.na(Menstruation)) %>% nrow()
 nb_removed_h2000 <- nb_removed_h2000 + h2000_nb_women_no_menstruation_response
